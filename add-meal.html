@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Add Meal - DietMate</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="max-w-4xl mx-auto py-8">
+  <a href="dashboard.html#meals" class="inline-flex items-center text-sm text-gray-600 hover:underline mb-4">&larr; Back to Meals</a>
+
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h1 class="text-2xl font-semibold mb-4">Log a New Meal</h1>
+
+      <form id="meal-form" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm font-medium">Meal Name</label>
+            <input id="meal-name" required class="mt-1 block w-full border border-gray-200 rounded px-3 py-2" />
+          </div>
+          <div>
+            <label class="text-sm font-medium">Category</label>
+            <select id="meal-category" class="mt-1 block w-full border border-gray-200 rounded px-3 py-2">
+              <option>Breakfast</option>
+              <option>Lunch</option>
+              <option>Dinner</option>
+              <option>Snacks</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="text-sm font-medium">Time</label>
+            <input id="meal-time" type="time" class="mt-1 block w-full border border-gray-200 rounded px-3 py-2"/>
+          </div>
+          <div>
+            <label class="text-sm font-medium">Servings</label>
+            <input id="meal-servings" type="number" min="1" value="1" class="mt-1 block w-full border border-gray-200 rounded px-3 py-2"/>
+          </div>
+          <div>
+            <label class="text-sm font-medium">Image URL (optional)</label>
+            <input id="meal-image" class="mt-1 block w-full border border-gray-200 rounded px-3 py-2" placeholder="https://..." />
+          </div>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium">Dietary preferences</label>
+          <div class="mt-2 flex gap-3 items-center">
+            <label class="inline-flex items-center"><input type="checkbox" id="pref-vegan" class="mr-2"/>Vegan</label>
+            <label class="inline-flex items-center"><input type="checkbox" id="pref-keto" class="mr-2"/>Keto</label>
+            <label class="inline-flex items-center"><input type="checkbox" id="pref-glutenfree" class="mr-2"/>Gluten-free</label>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium">Nutritional breakdown (per meal)</label>
+          <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+            <input id="calories" type="number" placeholder="Calories" class="border border-gray-200 rounded px-3 py-2" />
+            <input id="protein" type="number" placeholder="Protein (g)" class="border border-gray-200 rounded px-3 py-2" />
+            <input id="carbs" type="number" placeholder="Carbs (g)" class="border border-gray-200 rounded px-3 py-2" />
+            <input id="fats" type="number" placeholder="Fats (g)" class="border border-gray-200 rounded px-3 py-2" />
+          </div>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium">Ingredients</label>
+          <div id="ingredients-list" class="mt-2 space-y-2">
+            <!-- ingredient rows appended here -->
+          </div>
+          <div class="mt-2">
+            <button id="add-ingredient" type="button" class="text-sm text-green-600 hover:underline">+ Add ingredient</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button id="save-meal" class="bg-green-500 text-white px-4 py-2 rounded">Save Meal</button>
+          <button id="save-plan" type="button" class="bg-blue-500 text-white px-4 py-2 rounded">Save to Meal Plan</button>
+          <button id="generate-shopping" type="button" class="bg-yellow-500 text-white px-4 py-2 rounded">Generate Shopping List</button>
+        </div>
+      </form>
+
+      <div id="suggestions" class="mt-6">
+        <h3 class="font-medium mb-2">Recipe suggestions</h3>
+        <div id="suggestions-list" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+      </div>
+
+      <div id="shopping-output" class="mt-6 hidden">
+        <h3 class="font-medium mb-2">Shopping List</h3>
+        <ul id="shopping-list" class="list-disc pl-5 bg-gray-50 p-3 rounded"></ul>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Small in-page dataset for recipe suggestions
+    const RECIPES = [
+      { name: 'Avocado Toast with Eggs', category: 'Breakfast', vegan: false, keto: false, glutenfree: false, ingredients: ['Bread','Avocado','Eggs','Salt'] },
+      { name: 'Vegan Smoothie Bowl', category: 'Breakfast', vegan: true, keto: false, glutenfree: true, ingredients: ['Banana','Berries','Almond milk','Chia seeds'] },
+      { name: 'Keto Chicken Salad', category: 'Lunch', vegan: false, keto: true, glutenfree: true, ingredients: ['Chicken','Lettuce','Mayonnaise','Olive oil'] },
+      { name: 'Quinoa Salad', category: 'Lunch', vegan: true, keto: false, glutenfree: true, ingredients: ['Quinoa','Cucumber','Tomato','Olive oil'] },
+      { name: 'Grilled Salmon', category: 'Dinner', vegan: false, keto: true, glutenfree: true, ingredients: ['Salmon','Lemon','Garlic','Herbs'] },
+      { name: 'Veggie Stir Fry', category: 'Dinner', vegan: true, keto: false, glutenfree: false, ingredients: ['Broccoli','Carrot','Soy sauce','Tofu'] }
+    ];
+
+    function createIngredientRow(value=''){
+      const row = document.createElement('div');
+      row.className = 'flex gap-2';
+      row.innerHTML = `<input type="text" class="flex-1 border border-gray-200 rounded px-3 py-2" value="${value}" placeholder="e.g. 2 tomatoes" />` +
+                      `<button type="button" class="text-red-500">Remove</button>`;
+      row.querySelector('button').addEventListener('click', ()=> row.remove());
+      return row;
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const ingList = document.getElementById('ingredients-list');
+      const addIngredientBtn = document.getElementById('add-ingredient');
+      const suggestionsList = document.getElementById('suggestions-list');
+      const generateBtn = document.getElementById('generate-shopping');
+      const shoppingOutput = document.getElementById('shopping-output');
+      const shoppingUl = document.getElementById('shopping-list');
+      
+      // Check if we are editing an existing meal via ?edit=<id>
+      const urlParams = new URLSearchParams(window.location.search);
+      let editingId = null;
+      if (urlParams.has('edit')) {
+        editingId = urlParams.get('edit');
+        const meals = JSON.parse(localStorage.getItem('meals')||'[]');
+        const mealToEdit = meals.find(m => m.id === editingId);
+        if (mealToEdit) {
+          document.querySelector('h1').textContent = 'Edit Meal';
+          document.getElementById('meal-name').value = mealToEdit.name || '';
+          document.getElementById('meal-category').value = mealToEdit.category || 'Breakfast';
+          document.getElementById('meal-time').value = mealToEdit.time || '';
+          document.getElementById('meal-servings').value = mealToEdit.servings || 1;
+          document.getElementById('meal-image').value = mealToEdit.image || '';
+          document.getElementById('pref-vegan').checked = !!(mealToEdit.prefs && mealToEdit.prefs.vegan);
+          document.getElementById('pref-keto').checked = !!(mealToEdit.prefs && mealToEdit.prefs.keto);
+          document.getElementById('pref-glutenfree').checked = !!(mealToEdit.prefs && mealToEdit.prefs.glutenfree);
+          document.getElementById('calories').value = mealToEdit.nutrition && mealToEdit.nutrition.calories ? mealToEdit.nutrition.calories : '';
+          document.getElementById('protein').value = mealToEdit.nutrition && mealToEdit.nutrition.protein ? mealToEdit.nutrition.protein : '';
+          document.getElementById('carbs').value = mealToEdit.nutrition && mealToEdit.nutrition.carbs ? mealToEdit.nutrition.carbs : '';
+          document.getElementById('fats').value = mealToEdit.nutrition && mealToEdit.nutrition.fats ? mealToEdit.nutrition.fats : '';
+          // populate ingredients
+          ingList.innerHTML = '';
+          (mealToEdit.ingredients || []).forEach(i => ingList.appendChild(createIngredientRow(i)));
+        } else {
+          // invalid id; ignore
+          editingId = null;
+        }
+      }
+
+      // start with one ingredient row
+      ingList.appendChild(createIngredientRow());
+
+      addIngredientBtn.addEventListener('click', ()=> ingList.appendChild(createIngredientRow()));
+
+      // show suggestions based on selected dietary prefs
+      const updateSuggestions = ()=>{
+        suggestionsList.innerHTML = '';
+        const vegan = document.getElementById('pref-vegan').checked;
+        const keto = document.getElementById('pref-keto').checked;
+        const gf = document.getElementById('pref-glutenfree').checked;
+        const category = document.getElementById('meal-category').value;
+
+        const filtered = RECIPES.filter(r => {
+          if (category && r.category !== category) return false;
+          if (vegan && !r.vegan) return false;
+          if (keto && !r.keto) return false;
+          if (gf && !r.glutenfree) return false;
+          return true;
+        });
+
+        (filtered.length ? filtered : RECIPES.filter(r=>r.category===category)).slice(0,6).forEach(r=>{
+          const card = document.createElement('div');
+          card.className = 'p-3 bg-gray-50 rounded';
+          card.innerHTML = `<div class=\"font-medium mb-1\">${r.name}</div><div class=\"text-xs text-gray-500 mb-2\">${r.ingredients.join(', ')}</div><button class=\"bg-green-500 text-white px-3 py-1 rounded text-sm\">Use this</button>`;
+          card.querySelector('button').addEventListener('click', ()=>{
+            document.getElementById('meal-name').value = r.name;
+            document.getElementById('calories').value = r.calories || '';
+            // populate ingredients
+            ingList.innerHTML = '';
+            r.ingredients.forEach(i=> ingList.appendChild(createIngredientRow(i)));
+          });
+          suggestionsList.appendChild(card);
+        });
+      };
+
+      document.getElementById('pref-vegan').addEventListener('change', updateSuggestions);
+      document.getElementById('pref-keto').addEventListener('change', updateSuggestions);
+      document.getElementById('pref-glutenfree').addEventListener('change', updateSuggestions);
+      document.getElementById('meal-category').addEventListener('change', updateSuggestions);
+
+      updateSuggestions();
+
+      // Save meal (create or update)
+      document.getElementById('save-meal').addEventListener('click', (e)=>{
+        e.preventDefault();
+        const meal = {
+          id: editingId || 'm_'+Date.now(),
+          name: document.getElementById('meal-name').value,
+          category: document.getElementById('meal-category').value,
+          time: document.getElementById('meal-time').value,
+          servings: Number(document.getElementById('meal-servings').value)||1,
+          image: document.getElementById('meal-image').value,
+          prefs: {
+            vegan: document.getElementById('pref-vegan').checked,
+            keto: document.getElementById('pref-keto').checked,
+            glutenfree: document.getElementById('pref-glutenfree').checked
+          },
+          nutrition: {
+            calories: Number(document.getElementById('calories').value)||0,
+            protein: Number(document.getElementById('protein').value)||0,
+            carbs: Number(document.getElementById('carbs').value)||0,
+            fats: Number(document.getElementById('fats').value)||0,
+          },
+          ingredients: Array.from(ingList.querySelectorAll('input')).map(i=>i.value).filter(Boolean),
+          eaten: false,
+          createdAt: editingId ? (JSON.parse(localStorage.getItem('meals')||'[]').find(m=>m.id===editingId)||{}).createdAt || new Date().toISOString() : new Date().toISOString()
+        };
+
+        const existing = JSON.parse(localStorage.getItem('meals')||'[]');
+        if (editingId) {
+          const idx = existing.findIndex(m => m.id === editingId);
+          if (idx !== -1) {
+            existing[idx] = meal;
+            localStorage.setItem('meals', JSON.stringify(existing));
+            window.location.href = 'dashboard.html#meals';
+            return;
+          }
+        }
+
+        existing.unshift(meal);
+        localStorage.setItem('meals', JSON.stringify(existing));
+        // Redirect back to dashboard Meals tab so the user sees the saved meal immediately
+        window.location.href = 'dashboard.html#meals';
+      });
+
+      // Save to meal plan
+      document.getElementById('save-plan').addEventListener('click', ()=>{
+        const planName = prompt('Enter a name for this meal plan (e.g. Week 1)');
+        if (!planName) return;
+        const meals = JSON.parse(localStorage.getItem('meals')||'[]');
+        const plan = JSON.parse(localStorage.getItem('meal_plans')||'{}');
+        plan[planName] = plan[planName] || [];
+        // Use last saved meal as the item to add
+        if (meals.length) plan[planName].push(meals[0]);
+        localStorage.setItem('meal_plans', JSON.stringify(plan));
+        alert('Meal added to plan: '+planName);
+      });
+
+      // Generate shopping list from ingredients in form + saved plan
+      generateBtn.addEventListener('click', ()=>{
+        const ingredients = new Set();
+        // include form ingredients
+        Array.from(ingList.querySelectorAll('input')).map(i=>i.value).filter(Boolean).forEach(i=>ingredients.add(i));
+        // include ingredients from last saved meal
+        const meals = JSON.parse(localStorage.getItem('meals')||'[]');
+        if (meals.length) meals[0].ingredients.forEach(i=>ingredients.add(i));
+
+        // include ingredients from selected plan (if any)
+        const plans = JSON.parse(localStorage.getItem('meal_plans')||'{}');
+        Object.values(plans).flat().forEach(m=> (m.ingredients||[]).forEach(i=>ingredients.add(i)));
+
+        shoppingUl.innerHTML = '';
+        Array.from(ingredients).forEach(i=>{
+          const li = document.createElement('li'); li.textContent = i; shoppingUl.appendChild(li);
+        });
+        shoppingOutput.classList.remove('hidden');
+      });
+
+    });
+  </script>
+</body>
+</html>

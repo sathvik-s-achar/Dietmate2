@@ -1,0 +1,111 @@
+<div id="meals" class="content-section hidden space-y-6">
+                    <h2>Meal Tracking</h2>
+                    <!-- Dummy data for meals - replace with dynamic data from script.js -->
+                    <div class="p-6 bg-white rounded-lg shadow">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3>Today's Meals</h3>
+                            <a href="add-meal.html" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 mr-2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                Add Meal
+                            </a>
+                        </div>
+                        <div id="todays-meals-list" class="space-y-4">
+                            <div class="flex gap-4 p-4 rounded-lg border border-gray-200 hover:border-green-500 transition-colors">
+                                <img src="https://images.unsplash.com/photo-1676471970358-1cff04452e7b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxicmVha2Zhc3QlMjBhdm9jYWRvJTIwdG9hc3R8ZW58MXx8fHwxNzYxMjM0ODUyfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" alt="Avocado Toast with Eggs" class="w-24 h-24 rounded-lg object-cover">
+                                <div class="flex-1">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <div>
+                                            <h4 class="mb-1">Avocado Toast with Eggs</h4>
+                                            <div class="flex items-center gap-2 text-sm text-gray-500">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                                <span>8:30 AM</span>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-lg text-green-600">420</div>
+                                            <div class="text-xs text-gray-500">calories</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4 mt-3">
+                                        <div class="flex flex-col">
+                                            <span class="text-xs text-gray-500">Protein</span>
+                                            <span class="text-sm">18g</span>
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="text-xs text-gray-500">Carbs</span>
+                                            <span class="text-sm">42g</span>
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="text-xs text-gray-500">Fats</span>
+                                            <span class="text-sm">22g</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-4 p-4 rounded-lg border border-gray-200 hover:border-green-500 transition-colors">
+                                <img src="https://images.unsplash.com/photo-1643750182373-b4a55a8c2801?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoZWFsdGh5JTIwc2FsYWQlMjBib3dsfGVufDF8fHx8MTc2MTIzODc3Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" alt="Greek Salad Bowl" class="w-24 h-24 rounded-lg object-cover">
+                                <div class="flex-1">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <div>
+                                            <h4 class="mb-1">Greek Salad Bowl</h4>
+                                            <div class="flex items-center gap-2 text-sm text-gray-500">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                                <span>12:45 PM</span>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-lg text-green-600">380</div>
+                                            <div class="text-xs text-gray-500">calories</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4 mt-3">
+                                        <div class="flex flex-col">
+                                            <span class="text-xs text-gray-500">Protein</span>
+                                            <span class="text-sm">22g</span>
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="text-xs text-gray-500">Carbs</span>
+                                            <span class="text-sm">28g</span>
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="text-xs text-gray-500">Fats</span>
+                                            <span class="text-sm">18g</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-4 p-4 rounded-lg border border-gray-200 hover:border-green-500 transition-colors">
+                                <img src="https://images.unsplash.com/photo-1682423187670-4817da9a1b23?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncmlsbGVkJTIwY2hpY2tlbiUyMG1lYWx8ZW58MXx8fHwxNzYxMjUyMTI5fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" alt="Grilled Chicken & Vegetables" class="w-24 h-24 rounded-lg object-cover">
+                                <div class="flex-1">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <div>
+                                            <h4 class="mb-1">Grilled Chicken & Vegetables</h4>
+                                            <div class="flex items-center gap-2 text-sm text-gray-500">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                                <span>7:15 PM</span>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-lg text-green-600">650</div>
+                                            <div class="text-xs text-gray-500">calories</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4 mt-3">
+                                        <div class="flex flex-col">
+                                            <span class="text-xs text-gray-500">Protein</span>
+                                            <span class="text-sm">48g</span>
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="text-xs text-gray-500">Carbs</span>
+                                            <span class="text-sm">45g</span>
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="text-xs text-gray-500">Fats</span>
+                                            <span class="text-sm">28g</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
