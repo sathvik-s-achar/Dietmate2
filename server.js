@@ -755,7 +755,44 @@ app.put('/api/daily-progress/water', authenticateToken, async (req, res) => {
 });
 
 // Serve static files as the last step
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(__dirname));
+
+// Get the user's meal plan
+app.get('/api/planner', authenticateToken, async (req, res) => {
+    const { data, error } = await supabase
+        .from('meal_plans')
+        .select('plan_data')
+        .eq('user_id', req.user.id)
+        .single();
+
+    if (error && error.code !== 'PGRST116') { // Ignore "no rows found" error
+        return res.status(500).json({ message: error.message });
+    }
+
+    if (!data) {
+        // If no plan exists, return a default empty plan
+        return res.json({
+            mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: []
+        });
+    }
+
+    res.json(data.plan_data);
+});
+
+// Save the user's meal plan
+app.put('/api/planner', authenticateToken, async (req, res) => {
+    const { plan_data } = req.body;
+
+    const { error } = await supabase
+        .from('meal_plans')
+        .upsert({ user_id: req.user.id, plan_data }, { onConflict: 'user_id' });
+
+    if (error) {
+        return res.status(500).json({ message: error.message });
+    }
+
+    res.json({ message: 'Meal plan saved successfully.' });
+});
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

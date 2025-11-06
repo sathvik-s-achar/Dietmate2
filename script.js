@@ -748,6 +748,122 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // Function to set up the meal planner
+    const setupPlanner = async () => {
+        const mealLibraryList = document.getElementById('meal-library-list');
+        if (!mealLibraryList) return;
+
+        const token = localStorage.getItem('token');
+
+        // Fetch meals and planner data in parallel
+        const [mealsResponse, plannerResponse] = await Promise.all([
+            fetch('/api/meals', { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch('/api/planner', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        const meals = await mealsResponse.json();
+        let plannedMeals = await plannerResponse.json();
+
+        const savePlanner = async () => {
+            await fetch('/api/planner', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ plan_data: plannedMeals })
+            });
+        };
+
+        const renderPlanner = () => {
+            Object.keys(plannedMeals).forEach(day => {
+                const dayColumn = document.querySelector(`.day-column[data-day="${day}"]`);
+                if (!dayColumn) return;
+
+                const mealSlots = dayColumn.querySelectorAll('.meal-slot');
+                mealSlots.forEach(slot => {
+                    const mealType = slot.dataset.meal;
+                    const mealsInSlot = plannedMeals[day].filter(m => m.mealType === mealType);
+                    slot.innerHTML = `<h4 class="text-xs text-gray-500">${mealType.charAt(0).toUpperCase() + mealType.slice(1)}</h4>`;
+                    mealsInSlot.forEach(meal => {
+                        const mealElement = document.createElement('div');
+                        mealElement.className = 'planned-meal bg-white p-1 border rounded-md text-sm cursor-pointer';
+                        mealElement.textContent = meal.name;
+                        mealElement.addEventListener('click', () => {
+                            mealElement.remove();
+                            const mealIndex = plannedMeals[day].findIndex(m => m.id === meal.id && m.mealType === mealType);
+                            if (mealIndex > -1) {
+                                plannedMeals[day].splice(mealIndex, 1);
+                            }
+                            savePlanner();
+                            updateDailySummary(day);
+                        });
+                        slot.appendChild(mealElement);
+                    });
+                });
+                updateDailySummary(day);
+            });
+        };
+
+        const updateDailySummary = (day) => {
+            const dayColumn = document.querySelector(`.day-column[data-day="${day}"]`);
+            if (!dayColumn) return;
+
+            const summaryElement = dayColumn.querySelector('.daily-summary');
+            if (!summaryElement) return;
+
+            const dailyMeals = plannedMeals[day];
+            const totalCalories = dailyMeals.reduce((sum, meal) => sum + (meal.nutrition?.calories || 0), 0);
+            const totalProtein = dailyMeals.reduce((sum, meal) => sum + (meal.nutrition?.protein || 0), 0);
+
+            summaryElement.innerHTML = `
+                <h4 class="font-semibold mb-1">Daily Totals</h4>
+                <div>Calories: ${totalCalories}</div>
+                <div>Protein: ${totalProtein}g</div>
+            `;
+        };
+
+        mealLibraryList.innerHTML = '';
+        meals.forEach(meal => {
+            const mealItem = document.createElement('div');
+            mealItem.className = 'p-2 border rounded-lg bg-gray-100 cursor-move';
+            mealItem.textContent = meal.name;
+            mealItem.draggable = true;
+            mealItem.dataset.mealId = meal.id;
+            mealItem.addEventListener('dragstart', (event) => {
+                event.dataTransfer.setData('text/plain', meal.id);
+            });
+            mealLibraryList.appendChild(mealItem);
+        });
+
+        const mealSlots = document.querySelectorAll('.meal-slot');
+        mealSlots.forEach(slot => {
+            slot.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                slot.classList.add('bg-green-100');
+            });
+            slot.addEventListener('dragleave', () => {
+                slot.classList.remove('bg-green-100');
+            });
+            slot.addEventListener('drop', (event) => {
+                event.preventDefault();
+                slot.classList.remove('bg-green-100');
+                const mealId = event.dataTransfer.getData('text/plain');
+                const meal = meals.find(m => m.id == mealId);
+                if (meal) {
+                    const day = slot.dataset.day;
+                    const mealType = slot.dataset.meal;
+                    const newPlannedMeal = { ...meal, mealType };
+                    plannedMeals[day].push(newPlannedMeal);
+                    savePlanner();
+                    renderPlanner();
+                }
+            });
+        });
+
+        renderPlanner();
+    };
+
     // Main content loading function
     const showContent = (tabId) => {
         console.log(`Attempting to show content for tab: ${tabId}`);
@@ -808,6 +924,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         setupProfileForm();
                     } else if (tabId === 'ai-coach') {
                         setupAICoach();
+                    } else if (tabId === 'planner') {
+                        setupPlanner();
                     }
                                                         } catch (parseErr) {
                                                             console.error('Error parsing fetched HTML:', parseErr);

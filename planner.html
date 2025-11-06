@@ -1,16 +1,158 @@
-<div id="planner" class="content-section hidden space-y-6">
-    <h2>Meal Planner</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="md:col-span-1 bg-white rounded-lg p-6 shadow">
-            <h3 class="text-lg font-semibold mb-4">My Meal Plans</h3>
-            <div id="meal-plans-list" class="space-y-2"></div>
-            <a href="create-plan.html" id="create-plan-btn" class="mt-4 w-full block text-center bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-                Create New Plan
-            </a>
+<div id="planner" class="content-section space-y-6">
+    <h2 class="text-2xl font-semibold">Meal Planner</h2>
+    <div class="flex gap-8">
+        <!-- Main calendar area -->
+        <div class="flex-1 grid grid-cols-7 gap-2">
+            <!-- Day columns -->
+            <div class="day-column bg-gray-50 rounded-lg p-2" data-day="mon">
+                <h3 class="font-semibold text-center mb-2">Monday</h3>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="mon" data-meal="breakfast">
+                    <h4 class="text-xs text-gray-500">Breakfast</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="mon" data-meal="lunch">
+                    <h4 class="text-xs text-gray-500">Lunch</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="mon" data-meal="dinner">
+                    <h4 class="text-xs text-gray-500">Dinner</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg" data-day="mon" data-meal="snacks">
+                    <h4 class="text-xs text-gray-500">Snacks</h4>
+                </div>
+                <div class="daily-summary mt-2 p-2 bg-gray-100 rounded-lg text-xs">
+                    <h4 class="font-semibold mb-1">Daily Totals</h4>
+                    <div>Calories: 0</div>
+                    <div>Protein: 0g</div>
+                </div>
+            </div>
+            <div class="day-column bg-gray-50 rounded-lg p-2" data-day="tue">
+                <h3 class="font-semibold text-center mb-2">Tuesday</h3>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="tue" data-meal="breakfast">
+                    <h4 class="text-xs text-gray-500">Breakfast</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="tue" data-meal="lunch">
+                    <h4 class="text-xs text-gray-500">Lunch</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="tue" data-meal="dinner">
+                    <h4 class="text-xs text-gray-500">Dinner</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg" data-day="tue" data-meal="snacks">
+                    <h4 class="text-xs text-gray-500">Snacks</h4>
+                </div>
+                <div class="daily-summary mt-2 p-2 bg-gray-100 rounded-lg text-xs">
+                    <h4 class="font-semibold mb-1">Daily Totals</h4>
+                    <div>Calories: 0</div>
+                    <div>Protein: 0g</div>
+                </div>
+            </div>
+            <div class="day-column bg-gray-50 rounded-lg p-2" data-day="wed">
+                <h3 class="font-semibold text-center mb-2">Wednesday</h3>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="wed" data-meal="breakfast">
+                    <h4 class="text-xs text-gray-500">Breakfast</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="wed" data-meal="lunch">
+                    <h4 class="text-xs text-gray-500">Lunch</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="wed" data-meal="dinner">
+                    <h4 class="text-xs text-gray-500">Dinner</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg" data-day="wed" data-meal="snacks">
+                    <h4 class="text-xs text-gray-500">Snacks</h4>
+                </div>
+                <div class="daily-summary mt-2 p-2 bg-gray-100 rounded-lg text-xs">
+                    <h4 class="font-semibold mb-1">Daily Totals</h4>
+                    <div>Calories: 0</div>
+                    <div>Protein: 0g</div>
+                </div>
+            </div>
+            <div class="day-column bg-gray-50 rounded-lg p-2" data-day="thu">
+                <h3 class="font-semibold text-center mb-2">Thursday</h3>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="thu" data-meal="breakfast">
+                    <h4 class="text-xs text-gray-500">Breakfast</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="thu" data-meal="lunch">
+                    <h4 class="text-xs text-gray-500">Lunch</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="thu" data-meal="dinner">
+                    <h4 class="text-xs text-gray-500">Dinner</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg" data-day="thu" data-meal="snacks">
+                    <h4 class="text-xs text-gray-500">Snacks</h4>
+                </div>
+                <div class="daily-summary mt-2 p-2 bg-gray-100 rounded-lg text-xs">
+                    <h4 class="font-semibold mb-1">Daily Totals</h4>
+                    <div>Calories: 0</div>
+                    <div>Protein: 0g</div>
+                </div>
+            </div>
+            <div class="day-column bg-gray-50 rounded-lg p-2" data-day="fri">
+                <h3 class="font-semibold text-center mb-2">Friday</h3>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="fri" data-meal="breakfast">
+                    <h4 class="text-xs text-gray-500">Breakfast</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="fri" data-meal="lunch">
+                    <h4 class="text-xs text-gray-500">Lunch</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="fri" data-meal="dinner">
+                    <h4 class="text-xs text-gray-500">Dinner</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg" data-day="fri" data-meal="snacks">
+                    <h4 class="text-xs text-gray-500">Snacks</h4>
+                </div>
+                <div class="daily-summary mt-2 p-2 bg-gray-100 rounded-lg text-xs">
+                    <h4 class="font-semibold mb-1">Daily Totals</h4>
+                    <div>Calories: 0</div>
+                    <div>Protein: 0g</div>
+                </div>
+            </div>
+            <div class="day-column bg-gray-50 rounded-lg p-2" data-day="sat">
+                <h3 class="font-semibold text-center mb-2">Saturday</h3>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="sat" data-meal="breakfast">
+                    <h4 class="text-xs text-gray-500">Breakfast</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="sat" data-meal="lunch">
+                    <h4 class="text-xs text-gray-500">Lunch</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="sat" data-meal="dinner">
+                    <h4 class="text-xs text-gray-500">Dinner</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg" data-day="sat" data-meal="snacks">
+                    <h4 class="text-xs text-gray-500">Snacks</h4>
+                </div>
+                <div class="daily-summary mt-2 p-2 bg-gray-100 rounded-lg text-xs">
+                    <h4 class="font-semibold mb-1">Daily Totals</h4>
+                    <div>Calories: 0</div>
+                    <div>Protein: 0g</div>
+                </div>
+            </div>
+            <div class="day-column bg-gray-50 rounded-lg p-2" data-day="sun">
+                <h3 class="font-semibold text-center mb-2">Sunday</h3>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="sun" data-meal="breakfast">
+                    <h4 class="text-xs text-gray-500">Breakfast</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="sun" data-meal="lunch">
+                    <h4 class="text-xs text-gray-500">Lunch</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg mb-2" data-day="sun" data-meal="dinner">
+                    <h4 class="text-xs text-gray-500">Dinner</h4>
+                </div>
+                <div class="meal-slot p-2 border-dashed border-2 border-gray-300 rounded-lg" data-day="sun" data-meal="snacks">
+                    <h4 class="text-xs text-gray-500">Snacks</h4>
+                </div>
+                <div class="daily-summary mt-2 p-2 bg-gray-100 rounded-lg text-xs">
+                    <h4 class="font-semibold mb-1">Daily Totals</h4>
+                    <div>Calories: 0</div>
+                    <div>Protein: 0g</div>
+                </div>
+            </div>
         </div>
-        <div class="md:col-span-2 bg-white rounded-lg p-6 shadow">
-            <h3 id="plan-name-header" class="text-lg font-semibold mb-4">Select a plan to view details</h3>
-            <div id="plan-details" class="space-y-4"></div>
+
+        <!-- Meal library sidebar -->
+        <div class="w-64 bg-white p-4 rounded-lg shadow">
+            <h3 class="font-semibold mb-4">Meal Library</h3>
+            <input type="text" id="meal-search" placeholder="Search meals..." class="w-full border border-gray-200 rounded px-3 py-2 mb-4">
+            <div id="meal-library-list" class="space-y-2">
+                <!-- Draggable meal items will be rendered here -->
+            </div>
         </div>
     </div>
 </div>
