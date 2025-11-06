@@ -5,6 +5,10 @@ const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
 
 const app = express();
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
 const PORT = process.env.PORT || 3000;
 
 // Basic CORS setup
@@ -660,6 +664,63 @@ app.get('/api/dashboard-stats', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error("Error fetching dashboard stats:", error);
         res.status(500).json({ message: "Error fetching dashboard stats." });
+    }
+});
+
+// API to update water intake
+app.put('/api/daily-progress/water', authenticateToken, async (req, res) => {
+    const { water_intake } = req.body;
+    if (typeof water_intake === 'undefined' || water_intake < 0) {
+        return res.status(400).json({ message: 'Valid water_intake is required.' });
+    }
+
+    try {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Try to find existing daily progress for today
+        let { data: progress, error: findError } = await supabase
+            .from('daily_progress')
+            .select('id')
+            .eq('user_id', req.user.id)
+            .eq('date', today)
+            .single();
+
+        if (findError && findError.code !== 'PGRST116') { // PGRST116 means no rows found
+            throw findError;
+        }
+
+        if (progress) {
+            // Update existing record
+            const { error: updateError } = await supabase
+                .from('daily_progress')
+                .update({ water_intake })
+                .eq('id', progress.id);
+
+            if (updateError) throw updateError;
+        } else {
+            // Create new record if none exists for today
+            const { error: insertError } = await supabase
+                .from('daily_progress')
+                .insert([
+                    {
+                        user_id: req.user.id,
+                        date: today,
+                        water_intake,
+                        calories_consumed: 0,
+                        protein_consumed: 0,
+                        carbs_consumed: 0,
+                        fats_consumed: 0,
+                    }
+                ]);
+
+            if (insertError) throw insertError;
+        }
+
+        res.json({ message: 'Water intake updated successfully.' });
+
+    } catch (error) {
+        console.error("Error updating water intake:", error);
+        res.status(500).json({ message: 'Error updating water intake.' });
     }
 });
 

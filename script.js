@@ -277,8 +277,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // Function to handle water intake logic
-    const setupWaterIntake = (rootElement) => {
-        let waterIntake = 6; // Initial value
+    const setupWaterIntake = (rootElement, initialWaterIntake) => {
+        let waterIntake = initialWaterIntake || 0; // Initial value from fetched stats
         const maxWaterIntake = 8;
         const circumference = 502.6548245743669; // 2 * PI * 80 (radius of the SVG circle)
 
@@ -288,14 +288,45 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        const updateWaterIntakeAPI = async (newWaterIntake) => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.warn("No token found, cannot update water intake.");
+                return;
+            }
+            try {
+                const response = await fetch('/api/daily-progress/water', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ water_intake: newWaterIntake })
+                });
+
+                if (!response.ok) {
+                    console.log('Error response from API:', response);
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                console.log('Water intake updated successfully via API.');
+                // Re-fetch dashboard stats to update the main water card
+                fetchAndRenderDashboardStats();
+            } catch (error) {
+                console.error('Error updating water intake via API:', error);
+                alert('Failed to update water intake.');
+            }
+        };
+
         const updateWaterIntakeDisplay = () => {
-            console.log("Updating water intake display...");
+            console.log("Updating water intake display...", { waterIntake });
 
             // Find the svg that contains the progress circle (look for circle with stroke-dasharray)
             const progressCircle = waterIntakeCard.querySelector('svg circle[stroke-dasharray]');
+            console.log({ progressCircle });
 
             // Find the numeric counter in the absolute overlay inside the same card
             const overlayCount = waterIntakeCard.querySelector('.absolute .text-3xl');
+            console.log({ overlayCount });
 
             // Find the glasses container
             const waterGlassesContainer = waterIntakeCard.querySelector('.mt-6.grid');
@@ -335,6 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (waterIntake < maxWaterIntake) {
                     waterIntake++;
                     updateWaterIntakeDisplay();
+                    updateWaterIntakeAPI(waterIntake);
                 }
             });
         }
@@ -345,6 +377,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (waterIntake > 0) {
                     waterIntake--;
                     updateWaterIntakeDisplay();
+                    updateWaterIntakeAPI(waterIntake);
                 }
             });
         }
@@ -510,15 +543,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 weeklyGoalBar.style.width = `${Math.min(100, weeklyGoalPercentage)}%`;
             }
 
+            const waterBar = document.getElementById('water-bar');
+            if (waterBar) {
+                const waterPercentage = (stats.water.consumed / stats.water.target) * 100;
+                waterBar.style.width = `${Math.min(100, waterPercentage)}%`;
+            }
+
             // Update username in header
             const headerUsername = document.querySelector('header h1 + p');
             if (headerUsername) {
                 headerUsername.textContent = `Welcome back, ${stats.username}!`;
             }
+            return stats; // Return the stats object
 
         } catch (error) {
             console.error("Error fetching dashboard stats:", error);
         }
+        return null; // Return null if an error occurs
     };
 
 
@@ -728,8 +769,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     // Setup interactive elements based on the loaded tab
                     if (tabId === 'dashboard') {
-                        setupWaterIntake(mainContent);
-                        fetchAndRenderDashboardStats();
+                        fetchAndRenderDashboardStats().then(stats => {
+                            if (stats) {
+                                setupWaterIntake(mainContent, stats.water.consumed);
+                            }
+                        });
                         fetchAndDisplayProfile();
                         setupAICoach(); // Call setupAICoach here
                     } else if (tabId === 'signin' || tabId === 'signup') {
