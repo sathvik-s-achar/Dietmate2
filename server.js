@@ -174,16 +174,36 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
 
 // Meals API
 app.get('/api/meals', authenticateToken, async (req, res) => {
-    const { data, error } = await supabase
+    const today = new Date().toISOString().split('T')[0];
+
+    const { data: mealData, error: mealError } = await supabase
         .from('meals')
         .select('*')
         .eq('user_id', req.user.id);
 
-    if (error) {
-        return res.status(500).json({ message: error.message });
+    if (mealError) {
+        return res.status(500).json({ message: mealError.message });
     }
 
-    res.json(data);
+    const { data: progress, error: progressError } = await supabase
+        .from('daily_progress')
+        .select('eaten_meals')
+        .eq('user_id', req.user.id)
+        .eq('date', today)
+        .single();
+
+    if (progressError && progressError.code !== 'PGRST116') {
+        return res.status(500).json({ message: progressError.message });
+    }
+
+    const eatenMealsToday = progress ? progress.eaten_meals || [] : [];
+
+    const mealsWithEatenStatus = mealData.map(meal => ({
+        ...meal,
+        is_eaten_today: eatenMealsToday.includes(meal.id)
+    }));
+
+    res.json(mealsWithEatenStatus);
 });
 
 app.get('/api/meals/:id', authenticateToken, async (req, res) => {
@@ -244,12 +264,14 @@ app.put('/api/meals/:id', authenticateToken, async (req, res) => {
 // Toggle eaten status for a meal
 app.put('/api/meals/:id/toggle-eaten', authenticateToken, async (req, res) => {
     const { id } = req.params;
+    const mealId = parseInt(id, 10);
+    const today = new Date().toISOString().split('T')[0];
 
-    // 1. Get the meal's current status and nutrition
+    // 1. Get the meal's nutrition
     const { data: meal, error: getError } = await supabase
         .from('meals')
-        .select('eaten, nutrition, servings, created_at') // Select nutrition and created_at
-        .eq('id', id)
+        .select('nutrition, servings')
+        .eq('id', mealId)
         .eq('user_id', req.user.id)
         .single();
 
@@ -257,95 +279,86 @@ app.put('/api/meals/:id/toggle-eaten', authenticateToken, async (req, res) => {
         return res.status(404).json({ message: 'Meal not found.' });
     }
 
-    const oldStatus = meal.eaten;
-    const newStatus = !oldStatus;
+    // 2. Get or create today's progress record
+    let { data: progress, error: findProgressError } = await supabase
+        .from('daily_progress')
+        .select('id, calories_consumed, protein_consumed, carbs_consumed, fats_consumed, eaten_meals')
+        .eq('user_id', req.user.id)
+        .eq('date', today)
+        .single();
 
-    // 2. Update the 'eaten' status in the meals table
-    const { error: updateError } = await supabase
-        .from('meals')
-        .update({ eaten: newStatus })
-        .eq('id', id);
-
-    if (updateError) {
-        console.error("Error toggling eaten status:", updateError);
-        return res.status(500).json({ message: 'Error updating meal.' });
+    if (findProgressError && findProgressError.code !== 'PGRST116') {
+        return res.status(500).json({ message: findProgressError.message });
     }
 
-    // 3. Update daily_progress based on the status change
-    if (meal.nutrition) {
-        console.log("Updating daily progress for meal:", JSON.stringify(meal, null, 2));
-        const mealDate = new Date().toISOString().split('T')[0]; // Use today's date
-
-        let { data: progress, error: findProgressError } = await supabase
+    if (!progress) {
+        const { data: newProgress, error: createError } = await supabase
             .from('daily_progress')
-            .select('id, calories_consumed, protein_consumed, carbs_consumed, fats_consumed')
-            .eq('user_id', req.user.id)
-            .eq('date', mealDate)
+            .insert({
+                user_id: req.user.id,
+                date: today,
+                calories_consumed: 0,
+                protein_consumed: 0,
+                carbs_consumed: 0,
+                fats_consumed: 0,
+                water_intake: 0,
+                eaten_meals: []
+            })
+            .select('id, calories_consumed, protein_consumed, carbs_consumed, fats_consumed, eaten_meals')
             .single();
-
-        if (findProgressError && findProgressError.code !== 'PGRST116') {
-            console.error("Error finding daily progress for toggle-eaten:", findProgressError);
-            // Continue, don't block the meal status update
+        if (createError) {
+            return res.status(500).json({ message: createError.message });
         }
+        progress = newProgress;
+    }
 
-        const cals = (meal.nutrition.calories || 0) * (meal.servings || 1);
-        const prot = (meal.nutrition.protein || 0) * (meal.servings || 1);
-        const carbs = (meal.nutrition.carbs || 0) * (meal.servings || 1);
-        const fats = (meal.nutrition.fats || 0) * (meal.servings || 1);
+    const eatenMeals = progress.eaten_meals || [];
+    const isEaten = eatenMeals.includes(mealId);
+    const newStatus = !isEaten;
 
-        console.log("Calculated nutrition:", { cals, prot, carbs, fats });
+    // 3. Update eaten_meals array
+    const newEatenMeals = newStatus
+        ? [...eatenMeals, mealId]
+        : eatenMeals.filter(mId => mId !== mealId);
 
-        let updatedCals = progress?.calories_consumed || 0;
-        let updatedProt = progress?.protein_consumed || 0;
-        let updatedCarbs = progress?.carbs_consumed || 0;
-        let updatedFats = progress?.fats_consumed || 0;
+    // 4. Update daily_progress with new macros and eaten_meals
+    const cals = (meal.nutrition.calories || 0) * (meal.servings || 1);
+    const prot = (meal.nutrition.protein || 0) * (meal.servings || 1);
+    const carbs = (meal.nutrition.carbs || 0) * (meal.servings || 1);
+    const fats = (meal.nutrition.fats || 0) * (meal.servings || 1);
 
-        console.log("Before update:", { updatedCals, updatedProt, updatedCarbs, updatedFats });
+    let updatedCals = progress.calories_consumed || 0;
+    let updatedProt = progress.protein_consumed || 0;
+    let updatedCarbs = progress.carbs_consumed || 0;
+    let updatedFats = progress.fats_consumed || 0;
 
-        if (newStatus) {
-            // Meal marked as EATEN: Add its macros to daily_progress
-            updatedCals += cals;
-            updatedProt += prot;
-            updatedCarbs += carbs;
-            updatedFats += fats;
-        } else {
-            // Meal marked as UNEATEN: Subtract its macros from daily_progress
-            updatedCals = Math.max(0, updatedCals - cals);
-            updatedProt = Math.max(0, updatedProt - prot);
-            updatedCarbs = Math.max(0, updatedCarbs - carbs);
-            updatedFats = Math.max(0, updatedFats - fats);
-        }
+    if (newStatus) {
+        updatedCals += cals;
+        updatedProt += prot;
+        updatedCarbs += carbs;
+        updatedFats += fats;
+    } else {
+        updatedCals = Math.max(0, updatedCals - cals);
+        updatedProt = Math.max(0, updatedProt - prot);
+        updatedCarbs = Math.max(0, updatedCarbs - carbs);
+        updatedFats = Math.max(0, updatedFats - fats);
+    }
 
-        console.log("After update:", { updatedCals, updatedProt, updatedCarbs, updatedFats });
+    const { error: updateError } = await supabase
+        .from('daily_progress')
+        .update({
+            eaten_meals: newEatenMeals,
+            calories_consumed: updatedCals,
+            protein_consumed: updatedProt,
+            carbs_consumed: updatedCarbs,
+            fats_consumed: updatedFats
+        })
+        .eq('id', progress.id);
+    console.log("newEatenMeals:", newEatenMeals);
+    console.log("updateError:", updateError);
 
-        if (progress) {
-            // Update existing daily_progress record
-            console.log("Updating existing progress record...");
-            await supabase
-                .from('daily_progress')
-                .update({
-                    calories_consumed: updatedCals,
-                    protein_consumed: updatedProt,
-                    carbs_consumed: updatedCarbs,
-                    fats_consumed: updatedFats,
-                })
-                .eq('id', progress.id);
-        } else if (newStatus) {
-            // Create new daily_progress record only if marking as eaten and no record exists
-            console.log("Creating new progress record...");
-            await supabase
-                .from('daily_progress')
-                .insert([
-                    {
-                        user_id: req.user.id,
-                        date: mealDate,
-                        calories_consumed: updatedCals,
-                        protein_consumed: updatedProt,
-                        carbs_consumed: updatedCarbs,
-                        fats_consumed: updatedFats, // Corrected this from 'fats'
-                    }
-                ]);
-        }
+    if (updateError) {
+        return res.status(500).json({ message: updateError.message });
     }
 
     res.json({ message: 'Meal status updated.', eaten: newStatus });
@@ -617,16 +630,31 @@ app.get('/api/dashboard-stats', authenticateToken, async (req, res) => {
         // 2. Get today's progress
         const { data: todayProgress, error: todayProgressError } = await supabase
             .from('daily_progress')
-            .select('calories_consumed, protein_consumed, water_intake')
+            .select('calories_consumed, protein_consumed, water_intake, eaten_meals')
             .eq('user_id', req.user.id)
             .eq('date', today)
             .single();
+        console.log("todayProgress:", todayProgress);
 
         if (todayProgressError && todayProgressError.code !== 'PGRST116') { // Ignore "no rows found" error
             throw todayProgressError;
         }
 
-        // 3. Get progress for the last 7 days to calculate weekly goal
+        // 3. Get eaten meals
+        let eatenMeals = [];
+        const eatenMealsTodayIds = todayProgress ? todayProgress.eaten_meals || [] : [];
+        console.log("eatenMealsTodayIds:", eatenMealsTodayIds);
+        if (eatenMealsTodayIds.length > 0) {
+            const { data: meals, error: mealsError } = await supabase
+                .from('meals')
+                .select('*')
+                .in('id', eatenMealsTodayIds);
+            if (mealsError) throw mealsError;
+            eatenMeals = meals;
+        }
+        console.log("eatenMeals:", eatenMeals);
+
+        // 4. Get progress for the last 7 days to calculate weekly goal
         const { data: weeklyProgress, error: weeklyProgressError } = await supabase
             .from('daily_progress')
             .select('calories_consumed, date')
@@ -638,7 +666,7 @@ app.get('/api/dashboard-stats', authenticateToken, async (req, res) => {
         // Calculate how many of the last 7 days the user met their calorie goal
         const daysGoalMet = weeklyProgress.filter(day => day.calories_consumed >= profile.calorie_target).length;
 
-        // 4. Combine and return the data
+        // 5. Combine and return the data
         const stats = {
             username: profile.username, // Added username here
             calories: {
@@ -656,8 +684,10 @@ app.get('/api/dashboard-stats', authenticateToken, async (req, res) => {
             weeklyGoal: {
                 daysMet: daysGoalMet,
                 target: 7,
-            }
+            },
+            eatenMeals: eatenMeals
         };
+        console.log("stats:", stats);
 
         res.json(stats);
 

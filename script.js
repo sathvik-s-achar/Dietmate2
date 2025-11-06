@@ -207,19 +207,32 @@ document.addEventListener("DOMContentLoaded", () => {
                 const stats = await response.json();
                 console.log("Dashboard stats for charts fetched:", stats);
 
-                // Weekly Calorie Chart (using mock labels for now, actual dates would come from /api/progress)
+                const eatenMeals = stats.eatenMeals || [];
+
+                // Today's Calorie Intake Chart
                 const weeklyCalorieCtx = document.getElementById('weeklyCalorieChart');
                 if (weeklyCalorieCtx) {
                     if (weeklyCalorieChartInstance) {
                         weeklyCalorieChartInstance.destroy();
                     }
+
+                    const labels = eatenMeals.map(meal => {
+                        if (!meal.time) return 'N/A';
+                        const [hours, minutes] = meal.time.split(':');
+                        const hoursInt = parseInt(hours, 10);
+                        const ampm = hoursInt >= 12 ? 'PM' : 'AM';
+                        const formattedHours = hoursInt % 12 || 12;
+                        return `${formattedHours}:${minutes} ${ampm}`;
+                    });
+                    const data = eatenMeals.map(meal => meal.nutrition?.calories || 0);
+
                     weeklyCalorieChartInstance = new Chart(weeklyCalorieCtx.getContext('2d'), {
                         type: 'bar',
                         data: {
-                            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], // Placeholder labels
+                            labels: labels,
                             datasets: [{
                                 label: 'Calories',
-                                data: [stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0], // Using today's consumed for all days as a placeholder
+                                data: data,
                                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
                                 borderColor: 'rgba(75, 192, 192, 1)',
                                 borderWidth: 1
@@ -243,13 +256,24 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (macroDistributionChartInstance) {
                         macroDistributionChartInstance.destroy();
                     }
+
+                    let totalProtein = 0;
+                    let totalCarbs = 0;
+                    let totalFats = 0;
+
+                    eatenMeals.forEach(meal => {
+                        totalProtein += meal.nutrition?.protein || 0;
+                        totalCarbs += meal.nutrition?.carbs || 0;
+                        totalFats += meal.nutrition?.fats || 0;
+                    });
+
                     macroDistributionChartInstance = new Chart(macroDistributionCtx.getContext('2d'), {
                         type: 'doughnut',
                         data: {
                             labels: ['Protein', 'Carbs', 'Fats'],
                             datasets: [{
                                 label: 'Macros',
-                                data: [stats.protein?.consumed ?? 0, ((stats.calories?.consumed ?? 0) - ((stats.protein?.consumed ?? 0) * 4) - ((stats.fats?.consumed ?? 0) * 9)) / 4, stats.fats?.consumed ?? 0], // Placeholder for carbs and fats
+                                data: [totalProtein, totalCarbs, totalFats],
                                 backgroundColor: [
                                     'rgba(255, 99, 132, 0.2)',
                                     'rgba(54, 162, 235, 0.2)',
@@ -712,7 +736,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const result = await response.json();
 
                     if (response.ok) {
-                        aiCoachResponse.innerHTML = result.response;
+                        aiCoachResponse.innerHTML = marked.parse(result.response);
                     } else {
                         aiCoachResponse.innerHTML = `Error: ${result.message || 'Failed to get response from AI Coach.'}`;
                     }
@@ -775,15 +799,16 @@ document.addEventListener("DOMContentLoaded", () => {
                             }
                         });
                         fetchAndDisplayProfile();
-                        setupAICoach(); // Call setupAICoach here
                     } else if (tabId === 'signin' || tabId === 'signup') {
                         setupAuthForms();
-                                                            } else if (tabId === 'meals') {
-                                                                renderMealsTab();
-                                                            } else if (tabId === 'profile') {
-                                                                populateProfileForm();
-                                                                setupProfileForm();
-                                                            }
+                    } else if (tabId === 'meals') {
+                        renderMealsTab();
+                    } else if (tabId === 'profile') {
+                        populateProfileForm();
+                        setupProfileForm();
+                    } else if (tabId === 'ai-coach') {
+                        setupAICoach();
+                    }
                                                         } catch (parseErr) {
                                                             console.error('Error parsing fetched HTML:', parseErr);
                                                             // Fallback: insert raw data (not ideal but better than crashing)
@@ -820,7 +845,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.log('Rendering meal:', m);
                 const card = document.createElement('div');
                 card.className = 'flex gap-4 p-4 rounded-lg border border-gray-200 hover:border-green-500 transition-colors';
-                if (m.eaten) {
+                if (m.is_eaten_today) {
                     card.classList.add('opacity-70');
                 }
 
@@ -879,10 +904,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 const eatenBtn = document.createElement('button');
                 // compact yellow button with icon (matches Edit/Delete style but yellow)
                 eatenBtn.className = 'bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-1 px-3 rounded inline-flex items-center text-sm';
-                const eatenIcon = m.eaten
+                const eatenIcon = m.is_eaten_today
                     ? `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-12.3"/><path d="M21 3v8h-8"/></svg>`
                     : `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`;
-                eatenBtn.innerHTML = eatenIcon + `<span class="ml-2">${m.eaten ? 'Uneat' : 'Eaten'}</span>`;
+                eatenBtn.innerHTML = eatenIcon + `<span class="ml-2">${m.is_eaten_today ? 'Uneat' : 'Eaten'}</span>`;
                 eatenBtn.addEventListener('click', () => {
                     toggleEaten(m.id);
                 });
