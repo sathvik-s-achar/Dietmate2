@@ -124,31 +124,48 @@
       
       // Check if we are editing an existing meal via ?edit=<id>
       const urlParams = new URLSearchParams(window.location.search);
-      let editingId = null;
-      if (urlParams.has('edit')) {
-        editingId = urlParams.get('edit');
-        const meals = JSON.parse(localStorage.getItem('meals')||'[]');
-        const mealToEdit = meals.find(m => m.id === editingId);
-        if (mealToEdit) {
-          document.querySelector('h1').textContent = 'Edit Meal';
-          document.getElementById('meal-name').value = mealToEdit.name || '';
-          document.getElementById('meal-category').value = mealToEdit.category || 'Breakfast';
-          document.getElementById('meal-time').value = mealToEdit.time || '';
-          document.getElementById('meal-servings').value = mealToEdit.servings || 1;
-          document.getElementById('meal-image').value = mealToEdit.image || '';
-          document.getElementById('pref-vegan').checked = !!(mealToEdit.prefs && mealToEdit.prefs.vegan);
-          document.getElementById('pref-keto').checked = !!(mealToEdit.prefs && mealToEdit.prefs.keto);
-          document.getElementById('pref-glutenfree').checked = !!(mealToEdit.prefs && mealToEdit.prefs.glutenfree);
-          document.getElementById('calories').value = mealToEdit.nutrition && mealToEdit.nutrition.calories ? mealToEdit.nutrition.calories : '';
-          document.getElementById('protein').value = mealToEdit.nutrition && mealToEdit.nutrition.protein ? mealToEdit.nutrition.protein : '';
-          document.getElementById('carbs').value = mealToEdit.nutrition && mealToEdit.nutrition.carbs ? mealToEdit.nutrition.carbs : '';
-          document.getElementById('fats').value = mealToEdit.nutrition && mealToEdit.nutrition.fats ? mealToEdit.nutrition.fats : '';
-          // populate ingredients
-          ingList.innerHTML = '';
-          (mealToEdit.ingredients || []).forEach(i => ingList.appendChild(createIngredientRow(i)));
+      const editingId = urlParams.get('edit');
+
+      if (editingId) {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('You must be signed in to edit a meal.');
+            window.location.href = '/signin.html';
         } else {
-          // invalid id; ignore
-          editingId = null;
+            fetch(`/api/meals/${editingId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error('Meal not found');
+                    }
+                    return res.json();
+                })
+                .then(mealToEdit => {
+                    document.querySelector('h1').textContent = 'Edit Meal';
+                    document.getElementById('meal-name').value = mealToEdit.name || '';
+                    document.getElementById('meal-category').value = mealToEdit.category || 'Breakfast';
+                    document.getElementById('meal-time').value = mealToEdit.time || '';
+                    document.getElementById('meal-servings').value = mealToEdit.servings || 1;
+                    document.getElementById('meal-image').value = mealToEdit.image_url || '';
+                    document.getElementById('pref-vegan').checked = !!(mealToEdit.preferences && mealToEdit.preferences.vegan);
+                    document.getElementById('pref-keto').checked = !!(mealToEdit.preferences && mealToEdit.preferences.keto);
+                    document.getElementById('pref-glutenfree').checked = !!(mealToEdit.preferences && mealToEdit.preferences.glutenfree);
+                    document.getElementById('calories').value = mealToEdit.nutrition && mealToEdit.nutrition.calories ? mealToEdit.nutrition.calories : '';
+                    document.getElementById('protein').value = mealToEdit.nutrition && mealToEdit.nutrition.protein ? mealToEdit.nutrition.protein : '';
+                    document.getElementById('carbs').value = mealToEdit.nutrition && mealToEdit.nutrition.carbs ? mealToEdit.nutrition.carbs : '';
+                    document.getElementById('fats').value = mealToEdit.nutrition && mealToEdit.nutrition.fats ? mealToEdit.nutrition.fats : '';
+                    // populate ingredients
+                    ingList.innerHTML = '';
+                    (mealToEdit.ingredients || []).forEach(i => ingList.appendChild(createIngredientRow(i)));
+                })
+                .catch(error => {
+                    console.error('Error fetching meal for editing:', error);
+                    alert(error.message);
+                    window.location.href = 'dashboard.html#meals';
+                });
         }
       }
 
@@ -196,59 +213,112 @@
       updateSuggestions();
 
       // Save meal (create or update)
-      document.getElementById('save-meal').addEventListener('click', (e)=>{
+      document.getElementById('save-meal').addEventListener('click', async (e) => {
         e.preventDefault();
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('You must be signed in to save a meal.');
+            window.location.href = '/signin.html';
+            return;
+        }
+
         const meal = {
-          id: editingId || 'm_'+Date.now(),
           name: document.getElementById('meal-name').value,
           category: document.getElementById('meal-category').value,
           time: document.getElementById('meal-time').value,
-          servings: Number(document.getElementById('meal-servings').value)||1,
-          image: document.getElementById('meal-image').value,
-          prefs: {
+          servings: Number(document.getElementById('meal-servings').value) || 1,
+          image_url: document.getElementById('meal-image').value,
+          preferences: {
             vegan: document.getElementById('pref-vegan').checked,
             keto: document.getElementById('pref-keto').checked,
             glutenfree: document.getElementById('pref-glutenfree').checked
           },
           nutrition: {
-            calories: Number(document.getElementById('calories').value)||0,
-            protein: Number(document.getElementById('protein').value)||0,
-            carbs: Number(document.getElementById('carbs').value)||0,
-            fats: Number(document.getElementById('fats').value)||0,
+            calories: Number(document.getElementById('calories').value) || 0,
+            protein: Number(document.getElementById('protein').value) || 0,
+            carbs: Number(document.getElementById('carbs').value) || 0,
+            fats: Number(document.getElementById('fats').value) || 0,
           },
-          ingredients: Array.from(ingList.querySelectorAll('input')).map(i=>i.value).filter(Boolean),
-          eaten: false,
-          createdAt: editingId ? (JSON.parse(localStorage.getItem('meals')||'[]').find(m=>m.id===editingId)||{}).createdAt || new Date().toISOString() : new Date().toISOString()
+          ingredients: Array.from(ingList.querySelectorAll('input')).map(i => i.value).filter(Boolean),
         };
 
-        const existing = JSON.parse(localStorage.getItem('meals')||'[]');
-        if (editingId) {
-          const idx = existing.findIndex(m => m.id === editingId);
-          if (idx !== -1) {
-            existing[idx] = meal;
-            localStorage.setItem('meals', JSON.stringify(existing));
-            window.location.href = 'dashboard.html#meals';
-            return;
-          }
-        }
+        const urlParams = new URLSearchParams(window.location.search);
+        const editingId = urlParams.get('edit');
 
-        existing.unshift(meal);
-        localStorage.setItem('meals', JSON.stringify(existing));
-        // Redirect back to dashboard Meals tab so the user sees the saved meal immediately
-        window.location.href = 'dashboard.html#meals';
+        try {
+            const response = await fetch(editingId ? `/api/meals/${editingId}` : '/api/meals', {
+                method: editingId ? 'PUT' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(meal)
+            });
+
+            const result = await response.json();
+            alert(result.message);
+
+            if (response.ok) {
+                window.location.href = 'dashboard.html#meals';
+            }
+        } catch (error) {
+            console.error('Error saving meal:', error);
+            alert('An error occurred while saving the meal.');
+        }
       });
 
       // Save to meal plan
-      document.getElementById('save-plan').addEventListener('click', ()=>{
-        const planName = prompt('Enter a name for this meal plan (e.g. Week 1)');
-        if (!planName) return;
-        const meals = JSON.parse(localStorage.getItem('meals')||'[]');
-        const plan = JSON.parse(localStorage.getItem('meal_plans')||'{}');
-        plan[planName] = plan[planName] || [];
-        // Use last saved meal as the item to add
-        if (meals.length) plan[planName].push(meals[0]);
-        localStorage.setItem('meal_plans', JSON.stringify(plan));
-        alert('Meal added to plan: '+planName);
+      document.getElementById('save-plan').addEventListener('click', async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('You must be signed in to save to a meal plan.');
+            return;
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const mealId = urlParams.get('edit');
+        if (!mealId) {
+            alert('Please save the meal first before adding it to a plan.');
+            return;
+        }
+
+        try {
+            const planName = prompt('Enter the name of the meal plan (e.g., "Week 1"):');
+            if (!planName) return;
+
+            // Check if plan exists, if not create it
+            const plansResponse = await fetch('/api/meal_plans', { headers: { 'Authorization': `Bearer ${token}` } });
+            const plans = await plansResponse.json();
+            let plan = plans.find(p => p.plan_name.toLowerCase() === planName.toLowerCase());
+
+            if (!plan) {
+                const newPlanResponse = await fetch('/api/meal_plans', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ plan_name: planName })
+                });
+                plan = await newPlanResponse.json();
+            }
+
+            const dayOfWeek = prompt('Enter day of the week (1 for Monday, 7 for Sunday):');
+            if (!dayOfWeek || isNaN(dayOfWeek) || dayOfWeek < 1 || dayOfWeek > 7) {
+                alert('Invalid day of the week.');
+                return;
+            }
+
+            await fetch(`/api/meal_plans/${plan.id}/items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ meal_id: mealId, day_of_week: parseInt(dayOfWeek, 10) })
+            });
+
+            alert(`Meal added to "${planName}" for day ${dayOfWeek}.`);
+
+        } catch (error) {
+            console.error('Error saving to meal plan:', error);
+            alert('An error occurred while saving to the meal plan.');
+        }
       });
 
       // Generate shopping list from ingredients in form + saved plan

@@ -205,7 +205,6 @@
   }
 
   img, svg, video, canvas, audio, iframe, embed, object {
-    vertical-align: middle;
     display: block;
   }
 
@@ -388,6 +387,6 @@
   :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) h4 {
     font-size: var(--text-base);
     font-weight: var(--font-weight-medium);
-    line-height: 1..hidden {
-    display: none;
+    line-height: 1.5;
+}
 }

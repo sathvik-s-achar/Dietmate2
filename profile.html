@@ -1,32 +1,54 @@
 <div id="profile" class="content-section hidden space-y-6">
-                    <h2>Profile Settings</h2>
-                    <div class="bg-white rounded-lg p-6 shadow">
-                        <h3 class="text-lg font-semibold mb-4">Personal Information</h3>
-                        <div class="space-y-3">
-                            <p><strong>Name:</strong> Sarah Johnson</p>
-                            <p><strong>Email:</strong> sarah.johnson@example.com</p>
-                            <p><strong>Age:</strong> 30</p>
-                            <p><strong>Height:</strong> 165 cm</p>
-                            <p><strong>Weight:</strong> 60 kg</p>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-lg p-6 shadow">
-                        <h3 class="text-lg font-semibold mb-4">Nutrition Goals</h3>
-                        <div class="space-y-3">
-                            <p><strong>Daily Calorie Target:</strong> 1800 kcal</p>
-                            <p><strong>Protein Goal:</strong> 90g</p>
-                            <p><strong>Carb Goal:</strong> 200g</p>
-                            <p><strong>Fat Goal:</strong> 60g</p>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-lg p-12 text-center border-2 border-dashed border-gray-300">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-16 h-16 mx-auto mb-4 text-gray-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        <h3 class="mb-2">Your Profile</h3>
-                        <p class="text-gray-500 mb-6">
-                            Manage your personal information and nutrition goals
-                        </p>
-                        <button class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-                            Edit Profile
-                        </button>
-                    </div>
-                </div>
+    <h2>Profile Settings</h2>
+    <form id="profile-form" class="bg-white rounded-lg p-6 shadow">
+        <h3 class="text-lg font-semibold mb-4">Personal Information</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700">Name</label>
+                <input type="text" id="username" name="username" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" id="email" name="email" disabled class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100">
+            </div>
+            <div>
+                <label for="age" class="block text-sm font-medium text-gray-700">Age</label>
+                <input type="number" id="age" name="age" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="height" class="block text-sm font-medium text-gray-700">Height (cm)</label>
+                <input type="number" id="height" name="height" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="weight" class="block text-sm font-medium text-gray-700">Weight (kg)</label>
+                <input type="number" id="weight" name="weight" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+        </div>
+
+        <h3 class="text-lg font-semibold mb-4 mt-6">Nutrition Goals</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="calorie_target" class="block text-sm font-medium text-gray-700">Daily Calorie Target (kcal)</label>
+                <input type="number" id="calorie_target" name="calorie_target" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="protein_goal" class="block text-sm font-medium text-gray-700">Protein Goal (g)</label>
+                <input type="number" id="protein_goal" name="protein_goal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="carb_goal" class="block text-sm font-medium text-gray-700">Carb Goal (g)</label>
+                <input type="number" id="carb_goal" name="carb_goal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="fat_goal" class="block text-sm font-medium text-gray-700">Fat Goal (g)</label>
+                <input type="number" id="fat_goal" name="fat_goal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+                Save Profile
+            </button>
+        </div>
+    </form>
+</div>

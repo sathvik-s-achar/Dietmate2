@@ -5,6 +5,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const navButtons = document.querySelectorAll(".nav-button");
     const mainContent = document.getElementById("main-content");
 
+    let weeklyCalorieChartInstance = null;
+    let macroDistributionChartInstance = null;
+    let progressWeeklyCalorieChartInstance = null;
+    let progressMacroDistributionChartInstance = null;
+
     // Initialize sidebar collapsed state (centralized here so there's only one source of truth)
     const applyInitialSidebarState = () => {
         const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
@@ -36,15 +41,16 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // Sidebar toggle functionality
-    sidebarToggle.addEventListener("click", () => {
-        // Debugging info to help trace why some elements may not change
-        console.log('sidebar-toggle clicked', {
-            sidebarExists: !!sidebar,
-            sidebarClasses: sidebar ? sidebar.className : null,
-            logoTextExists: !!document.getElementById('logo-text'),
-            navTextCount: document.querySelectorAll('.nav-text').length,
-            userInfoExists: !!document.getElementById('user-info')
-        });
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener("click", () => {
+            // Debugging info to help trace why some elements may not change
+            console.log('sidebar-toggle clicked', {
+                sidebarExists: !!sidebar,
+                sidebarClasses: sidebar ? sidebar.className : null,
+                logoTextExists: !!document.getElementById('logo-text'),
+                navTextCount: document.querySelectorAll('.nav-text').length,
+                userInfoExists: !!document.getElementById('user-info')
+            });
 
         if (sidebar) {
             sidebar.classList.toggle("w-64");
@@ -66,69 +72,59 @@ document.addEventListener("DOMContentLoaded", () => {
 
         console.log('sidebar state after toggle', { sidebarClasses: sidebar ? sidebar.className : null });
     });
+    } // End of sidebarToggle null check
 
     // Apply initial state once DOM is ready
     applyInitialSidebarState();
 
-    // Function to render Chart.js charts
-    const renderCharts = (tabId) => {
-        if (tabId === 'progress') {
-            console.log("Rendering progress charts...");
-            const weeklyCalorieCtx = document.getElementById('progressWeeklyCalorieChart').getContext('2d');
-            new Chart(weeklyCalorieCtx, {
-                type: 'line',
-                data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                    datasets: [{
-                        label: 'Calorie Intake',
-                        data: [1800, 2000, 1900, 2200, 2100, 2300, 1850],
-                        borderColor: '#22C55E',
-                        backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
+    // Function to fetch and render progress charts
+    const fetchAndRenderProgressCharts = async () => {
+        console.log("Fetching progress charts data...");
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.warn("No token found, cannot fetch progress charts data.");
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/progress', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
-            const macroDistributionCtx = document.getElementById('progressMacroDistributionChart').getContext('2d');
-            new Chart(macroDistributionCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Protein', 'Carbs', 'Fats'],
-                    datasets: [{
-                        data: [30, 45, 25],
-                        backgroundColor: ['#22C55E', '#FACC15', '#EF4444'],
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.error("Unauthorized: Token might be expired or invalid. Redirecting to signin.");
+                    window.location.href = '/signin.html';
+                    return;
                 }
-            });
-        } else if (tabId === 'dashboard') {
-            console.log("Rendering dashboard charts...");
-            const weeklyCalorieCtx = document.getElementById('weeklyCalorieChart');
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const progressData = await response.json();
+            console.log("Progress data fetched:", progressData);
+
+            // Prepare data for Weekly Calorie Intake chart
+            const labels = progressData.map(p => new Date(p.date).toLocaleDateString('en-US', { weekday: 'short' }));
+            const calorieData = progressData.map(p => p.calories_consumed);
+
+            const weeklyCalorieCtx = document.getElementById('progressWeeklyCalorieChart');
             if (weeklyCalorieCtx) {
-                new Chart(weeklyCalorieCtx.getContext('2d'), {
-                    type: 'bar',
+                if (progressWeeklyCalorieChartInstance) {
+                    progressWeeklyCalorieChartInstance.destroy();
+                }
+                progressWeeklyCalorieChartInstance = new Chart(weeklyCalorieCtx.getContext('2d'), {
+                    type: 'line',
                     data: {
-                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        labels: labels,
                         datasets: [{
-                            label: 'Calories',
-                            data: [1800, 1900, 2000, 2100, 1950, 2200, 2300],
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1
+                            label: 'Calorie Intake',
+                            data: calorieData,
+                            borderColor: '#22C55E',
+                            backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                            fill: true,
+                            tension: 0.4
                         }]
                     },
                     options: {
@@ -143,26 +139,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
 
-            const macroDistributionCtx = document.getElementById('macroDistributionChart');
+            // Prepare data for Macro Distribution chart (average for the period)
+            let totalProtein = 0;
+            let totalCarbs = 0;
+            let totalFats = 0;
+            progressData.forEach(p => {
+                totalProtein += p.protein_consumed || 0;
+                totalCarbs += p.carbs_consumed || 0;
+                totalFats += p.fats_consumed || 0;
+            });
+
+            const macroDistributionCtx = document.getElementById('progressMacroDistributionChart');
             if (macroDistributionCtx) {
-                new Chart(macroDistributionCtx.getContext('2d'), {
+                if (progressMacroDistributionChartInstance) {
+                    progressMacroDistributionChartInstance.destroy();
+                }
+                progressMacroDistributionChartInstance = new Chart(macroDistributionCtx.getContext('2d'), {
                     type: 'doughnut',
                     data: {
                         labels: ['Protein', 'Carbs', 'Fats'],
                         datasets: [{
-                            label: 'Macros',
-                            data: [120, 250, 80],
-                            backgroundColor: [
-                                'rgba(255, 99, 132, 0.2)',
-                                'rgba(54, 162, 235, 0.2)',
-                                'rgba(255, 206, 86, 0.2)'
-                            ],
-                            borderColor: [
-                                'rgba(255, 99, 132, 1)',
-                                'rgba(54, 162, 235, 1)',
-                                'rgba(255, 206, 86, 1)'
-                            ],
-                            borderWidth: 1
+                            data: [totalProtein, totalCarbs, totalFats],
+                            backgroundColor: ['#22C55E', '#FACC15', '#EF4444'],
+                            hoverOffset: 4
                         }]
                     },
                     options: {
@@ -171,33 +170,135 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 });
             }
+
+        } catch (error) {
+            console.error("Error fetching progress charts data:", error);
+        }
+    };
+
+    // Function to render Chart.js charts
+    const renderCharts = async (tabId) => {
+        if (tabId === 'progress') {
+            await fetchAndRenderProgressCharts();
+        } else if (tabId === 'dashboard') {
+            console.log("Fetching dashboard charts data...");
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.warn("No token found, cannot fetch dashboard charts data.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/dashboard-stats', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        console.error("Unauthorized: Token might be expired or invalid. Redirecting to signin.");
+                        window.location.href = '/signin.html';
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const stats = await response.json();
+                console.log("Dashboard stats for charts fetched:", stats);
+
+                // Weekly Calorie Chart (using mock labels for now, actual dates would come from /api/progress)
+                const weeklyCalorieCtx = document.getElementById('weeklyCalorieChart');
+                if (weeklyCalorieCtx) {
+                    if (weeklyCalorieChartInstance) {
+                        weeklyCalorieChartInstance.destroy();
+                    }
+                    weeklyCalorieChartInstance = new Chart(weeklyCalorieCtx.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], // Placeholder labels
+                            datasets: [{
+                                label: 'Calories',
+                                data: [stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0, stats.calories?.consumed ?? 0], // Using today's consumed for all days as a placeholder
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Macro Distribution Chart
+                const macroDistributionCtx = document.getElementById('macroDistributionChart');
+                if (macroDistributionCtx) {
+                    if (macroDistributionChartInstance) {
+                        macroDistributionChartInstance.destroy();
+                    }
+                    macroDistributionChartInstance = new Chart(macroDistributionCtx.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Protein', 'Carbs', 'Fats'],
+                            datasets: [{
+                                label: 'Macros',
+                                data: [stats.protein?.consumed ?? 0, ((stats.calories?.consumed ?? 0) - ((stats.protein?.consumed ?? 0) * 4) - ((stats.fats?.consumed ?? 0) * 9)) / 4, stats.fats?.consumed ?? 0], // Placeholder for carbs and fats
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.2)',
+                                    'rgba(54, 162, 235, 0.2)',
+                                    'rgba(255, 206, 86, 0.2)'
+                                ],
+                                borderColor: [
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 206, 86, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                        }
+                    });
+                }
+
+            } catch (error) {
+                console.error("Error fetching dashboard charts data:", error);
+            }
         }
     };
 
     // Function to handle water intake logic
-    const setupWaterIntake = () => {
+    const setupWaterIntake = (rootElement) => {
         let waterIntake = 6; // Initial value
         const maxWaterIntake = 8;
         const circumference = 502.6548245743669; // 2 * PI * 80 (radius of the SVG circle)
 
+        const waterIntakeCard = rootElement.querySelector('#water-intake-card');
+        if (!waterIntakeCard) {
+            // If the card is not on the page, do nothing.
+            return;
+        }
+
         const updateWaterIntakeDisplay = () => {
             console.log("Updating water intake display...");
-            const dashboardEl = mainContent.querySelector('#dashboard') || document.getElementById('dashboard');
-            if (!dashboardEl) {
-                console.warn('Dashboard element not found for water intake');
-                return;
-            }
 
             // Find the svg that contains the progress circle (look for circle with stroke-dasharray)
-            const progressCircle = dashboardEl.querySelector('svg circle[stroke-dasharray]');
-            const waterSvg = progressCircle ? progressCircle.closest('svg') : null;
+            const progressCircle = waterIntakeCard.querySelector('svg circle[stroke-dasharray]');
 
             // Find the numeric counter in the absolute overlay inside the same card
-            const overlayCount = dashboardEl.querySelector('.absolute .text-3xl');
+            const overlayCount = waterIntakeCard.querySelector('.absolute .text-3xl');
 
-            // Find the glasses container relative to the water card (closest card/p-6)
-            const waterCard = waterSvg ? waterSvg.closest('.p-6') : null;
-            const waterGlassesContainer = waterCard ? waterCard.querySelector('.mt-6.grid') : dashboardEl.querySelector('#dashboard .mt-6.grid');
+            // Find the glasses container
+            const waterGlassesContainer = waterIntakeCard.querySelector('.mt-6.grid');
 
             if (overlayCount) {
                 overlayCount.textContent = waterIntake;
@@ -225,8 +326,8 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         // Attach event listeners to water intake buttons
-        const addGlassButton = document.querySelector('#dashboard button[aria-label="Add glass of water"]');
-        const removeGlassButton = document.querySelector('#dashboard button[aria-label="Remove glass of water"]');
+        const addGlassButton = waterIntakeCard.querySelector('button[aria-label="Add glass of water"]');
+        const removeGlassButton = waterIntakeCard.querySelector('button[aria-label="Remove glass of water"]');
 
         if (addGlassButton) {
             addGlassButton.addEventListener('click', () => {
@@ -339,6 +440,249 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // Function to fetch and render dashboard statistics
+    const fetchAndRenderDashboardStats = async () => {
+        console.log("Fetching dashboard stats...");
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.warn("No token found, cannot fetch dashboard stats.");
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/dashboard-stats', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.error("Unauthorized: Token might be expired or invalid. Redirecting to signin.");
+                    window.location.href = '/signin.html';
+                    return;
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const stats = await response.json();
+            console.log("Dashboard stats fetched:", JSON.stringify(stats, null, 2));
+
+            // Update DOM elements with fetched data
+            const caloriesConsumedEl = document.getElementById('calories-consumed');
+            if (caloriesConsumedEl) caloriesConsumedEl.textContent = stats.calories.consumed;
+
+            const caloriesTargetEl = document.getElementById('calories-target');
+            if (caloriesTargetEl) caloriesTargetEl.textContent = `/ ${stats.calories.target} kcal`;
+
+            const proteinConsumedEl = document.getElementById('protein-consumed');
+            if (proteinConsumedEl) proteinConsumedEl.textContent = stats.protein.consumed;
+
+            const proteinTargetEl = document.getElementById('protein-target');
+            if (proteinTargetEl) proteinTargetEl.textContent = `/ ${stats.protein.target} g`;
+
+            const waterConsumedEl = document.getElementById('water-consumed');
+            if (waterConsumedEl) waterConsumedEl.textContent = stats.water.consumed;
+
+            const waterTargetEl = document.getElementById('water-target');
+            if (waterTargetEl) waterTargetEl.textContent = `/ ${stats.water.target} glasses`;
+
+            const weeklyGoalMetEl = document.getElementById('weekly-goal-met');
+            if (weeklyGoalMetEl) weeklyGoalMetEl.textContent = stats.weeklyGoal.daysMet;
+
+            const weeklyGoalTargetEl = document.getElementById('weekly-goal-target');
+            if (weeklyGoalTargetEl) weeklyGoalTargetEl.textContent = `/ ${stats.weeklyGoal.target} days`;
+
+            // Update progress bars (assuming they exist and have IDs)
+            const caloriesBar = document.getElementById('calories-bar');
+            if (caloriesBar) {
+                const caloriePercentage = (stats.calories.consumed / stats.calories.target) * 100;
+                caloriesBar.style.width = `${Math.min(100, caloriePercentage)}%`;
+            }
+            const proteinBar = document.getElementById('protein-bar');
+            if (proteinBar) {
+                const proteinPercentage = (stats.protein.consumed / stats.protein.target) * 100;
+                proteinBar.style.width = `${Math.min(100, proteinPercentage)}%`;
+            }
+            const weeklyGoalBar = document.getElementById('weekly-goal-bar');
+            if (weeklyGoalBar) {
+                const weeklyGoalPercentage = (stats.weeklyGoal.daysMet / stats.weeklyGoal.target) * 100;
+                weeklyGoalBar.style.width = `${Math.min(100, weeklyGoalPercentage)}%`;
+            }
+
+            // Update username in header
+            const headerUsername = document.querySelector('header h1 + p');
+            if (headerUsername) {
+                headerUsername.textContent = `Welcome back, ${stats.username}!`;
+            }
+
+        } catch (error) {
+            console.error("Error fetching dashboard stats:", error);
+        }
+    };
+
+
+
+    mainContent.addEventListener('click', (event) => {
+        if (event.target.id === 'sign-out-btn') {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userData');
+            window.location.href = '/signin.html';
+        }
+    });
+
+    const fetchAndDisplayProfile = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/profile', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const profile = await response.json();
+                const usernameElement = document.getElementById('sidebar-username');
+                if (usernameElement && profile.username) {
+                    usernameElement.textContent = profile.username;
+                }
+            } else {
+                console.error('Failed to fetch profile');
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+        }
+    };
+
+    // Function to fetch and populate profile form
+    const populateProfileForm = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/profile', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const profile = await response.json();
+                document.getElementById('username').value = profile.username || '';
+                document.getElementById('email').value = JSON.parse(localStorage.getItem('userData')).email || ''; // Email from userData
+                document.getElementById('age').value = profile.age || '';
+                document.getElementById('height').value = profile.height || '';
+                document.getElementById('weight').value = profile.weight || '';
+                document.getElementById('calorie_target').value = profile.calorie_target || '';
+                document.getElementById('protein_goal').value = profile.protein_goal || '';
+                document.getElementById('carb_goal').value = profile.carb_goal || '';
+                document.getElementById('fat_goal').value = profile.fat_goal || '';
+            } else {
+                console.error('Failed to fetch profile data:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error fetching profile data:', error);
+        }
+    };
+
+    // Function to handle profile form submission
+    const setupProfileForm = () => {
+        const profileForm = document.getElementById('profile-form');
+        if (profileForm) {
+            profileForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const token = localStorage.getItem('token');
+                if (!token) return;
+
+                const profileData = {
+                    username: document.getElementById('username').value,
+                    age: parseInt(document.getElementById('age').value) || null,
+                    height: parseInt(document.getElementById('height').value) || null,
+                    weight: parseFloat(document.getElementById('weight').value) || null,
+                    calorie_target: parseInt(document.getElementById('calorie_target').value) || null,
+                    protein_goal: parseInt(document.getElementById('protein_goal').value) || null,
+                    carb_goal: parseInt(document.getElementById('carb_goal').value) || null,
+                    fat_goal: parseInt(document.getElementById('fat_goal').value) || null,
+                };
+
+                try {
+                    const response = await fetch('/api/profile', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(profileData)
+                    });
+
+                    if (response.ok) {
+                        alert('Profile saved successfully!');
+                        // Re-fetch and display profile in sidebar after saving
+                        fetchAndDisplayProfile();
+                    } else {
+                        const errorData = await response.json();
+                        alert(`Failed to save profile: ${errorData.message}`);
+                    }
+                } catch (error) {
+                    console.error('Error saving profile:', error);
+                    alert('An error occurred while saving profile.');
+                }
+            });
+        }
+    };
+
+    // Function to handle AI Coach interaction
+    const setupAICoach = () => {
+        const askAiBtn = document.getElementById('ask-ai-btn');
+        const aiCoachPrompt = document.getElementById('ai-coach-prompt');
+        const aiCoachResponse = document.getElementById('ai-coach-response');
+
+        if (askAiBtn && aiCoachPrompt && aiCoachResponse) {
+            askAiBtn.addEventListener('click', async () => {
+                const prompt = aiCoachPrompt.value;
+                if (!prompt) {
+                    alert('Please enter a question for the AI Coach.');
+                    return;
+                }
+
+                aiCoachResponse.innerHTML = 'Thinking...';
+                aiCoachResponse.classList.remove('hidden');
+
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    console.warn("No token found, cannot ask AI Coach.");
+                    aiCoachResponse.innerHTML = 'Please sign in to use the AI Coach.';
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/ai-coach', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ prompt })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        aiCoachResponse.innerHTML = result.response;
+                    } else {
+                        aiCoachResponse.innerHTML = `Error: ${result.message || 'Failed to get response from AI Coach.'}`;
+                    }
+                } catch (error) {
+                    console.error('Error asking AI Coach:', error);
+                    aiCoachResponse.innerHTML = 'An error occurred while contacting the AI Coach.';
+                }
+            });
+        }
+    };
+
     // Main content loading function
     const showContent = (tabId) => {
         console.log(`Attempting to show content for tab: ${tabId}`);
@@ -384,29 +728,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     // Setup interactive elements based on the loaded tab
                     if (tabId === 'dashboard') {
-                        setupWaterIntake();
+                        setupWaterIntake(mainContent);
+                        fetchAndRenderDashboardStats();
+                        fetchAndDisplayProfile();
+                        setupAICoach(); // Call setupAICoach here
                     } else if (tabId === 'signin' || tabId === 'signup') {
                         setupAuthForms();
-                    } else if (tabId === 'meals') {
-                        // Render meals saved in localStorage into the Today's Meals section
-                        renderMealsTab();
-                    }
-                } catch (parseErr) {
-                    console.error('Error parsing fetched HTML:', parseErr);
-                    // Fallback: insert raw data (not ideal but better than crashing)
-                    mainContent.innerHTML = data;
-                }
-            })
+                                                            } else if (tabId === 'meals') {
+                                                                renderMealsTab();
+                                                            } else if (tabId === 'profile') {
+                                                                populateProfileForm();
+                                                                setupProfileForm();
+                                                            }
+                                                        } catch (parseErr) {
+                                                            console.error('Error parsing fetched HTML:', parseErr);
+                                                            // Fallback: insert raw data (not ideal but better than crashing)
+                                                            mainContent.innerHTML = data;
+                                                        }            })
             .catch(error => console.error('Error loading content:', error));
     };
 
     // Render the saved meals into the meals tab Today's Meals list
-    const renderMealsTab = () => {
+    const renderMealsTab = async () => {
         try {
             const listContainer = mainContent.querySelector('#todays-meals-list');
             if (!listContainer) return;
 
-            const meals = JSON.parse(localStorage.getItem('meals') || '[]');
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/meals', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const meals = await response.json();
+            console.log("Meals fetched from API:", meals);
             listContainer.innerHTML = '';
 
             if (!meals.length) {
@@ -418,7 +773,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             meals.forEach(m => {
-                console.log('Rendering meal:', m && m.id, m);
+                console.log('Rendering meal:', m);
                 const card = document.createElement('div');
                 card.className = 'flex gap-4 p-4 rounded-lg border border-gray-200 hover:border-green-500 transition-colors';
                 if (m.eaten) {
@@ -427,7 +782,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const img = document.createElement('img');
                 img.className = 'w-24 h-24 rounded-lg object-cover';
-                img.src = m.image || 'https://via.placeholder.com/96?text=Meal';
+                img.src = (m.image_url && (m.image_url.startsWith('http') || m.image_url.startsWith('/'))) ? m.image_url : 'https://placehold.co/96?text=Meal';
                 img.alt = m.name || 'Meal image';
 
                 const body = document.createElement('div');
@@ -538,17 +893,24 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // Toggle eaten state for a meal and re-render
-    const toggleEaten = (id) => {
+    const toggleEaten = async (id) => {
         try {
-            const meals = JSON.parse(localStorage.getItem('meals') || '[]');
-            const updated = meals.map(m => {
-                if (m.id === id) {
-                    return Object.assign({}, m, { eaten: !m.eaten });
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/meals/${id}/toggle-eaten`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`
                 }
-                return m;
             });
-            localStorage.setItem('meals', JSON.stringify(updated));
-            renderMealsTab();
+
+            if (response.ok) {
+                renderMealsTab();
+                // Also re-fetch and render dashboard stats if on dashboard or relevant page
+                // This ensures the dashboard cards (calories, protein) are updated
+                fetchAndRenderDashboardStats();
+            } else {
+                console.error('Failed to toggle eaten state');
+            }
         } catch (err) {
             console.error('Error toggling eaten state:', err);
         }
