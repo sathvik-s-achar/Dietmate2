@@ -770,14 +770,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     if (response.ok) {
                         let responseText = result.response;
-                        const mealRegex = /<meal>([\s\S]*?)<\/meal>/;
-                        const mealMatch = responseText.match(mealRegex);
+                        const mealRegex = /<meal>([\s\S]*?)<\/meal>/g; // Global regex to find all meal tags
+                        let match;
+                        const meals = [];
 
-                        if (mealMatch && mealMatch[1]) {
+                        while ((match = mealRegex.exec(responseText)) !== null) {
                             try {
-                                const mealJson = JSON.parse(mealMatch[1]);
-                                responseText = responseText.replace(mealRegex, ''); // Remove the JSON from the text
+                                const mealJson = JSON.parse(match[1]);
+                                meals.push(mealJson);
+                            } catch (e) {
+                                console.error("Failed to parse meal JSON from AI response:", e);
+                            }
+                        }
 
+                        // Remove all meal JSONs from the responseText before parsing with marked
+                        responseText = responseText.replace(mealRegex, '');
+
+                        aiCoachResponse.innerHTML = marked.parse(responseText);
+
+                        if (meals.length > 0) {
+                            meals.forEach(mealJson => {
                                 const mealCard = document.createElement('div');
                                 mealCard.className = 'p-4 border rounded-lg bg-green-50 my-4';
                                 mealCard.innerHTML = `
@@ -786,18 +798,12 @@ document.addEventListener("DOMContentLoaded", () => {
                                     <p>Ingredients: ${mealJson.ingredients.join(', ')}</p>
                                     <button class="add-ai-meal-btn mt-2 bg-green-500 text-white px-3 py-1 rounded text-sm">Add to Today's Log</button>
                                 `;
-
-                                aiCoachResponse.innerHTML = marked.parse(responseText);
                                 aiCoachResponse.appendChild(mealCard);
 
                                 mealCard.querySelector('.add-ai-meal-btn').addEventListener('click', () => {
                                     addMealFromAI(mealJson);
                                 });
-
-                            } catch (e) {
-                                console.error("Failed to parse meal JSON from AI response:", e);
-                                aiCoachResponse.innerHTML = marked.parse(responseText);
-                            }
+                            });
                         } else {
                             aiCoachResponse.innerHTML = marked.parse(responseText);
                         }
