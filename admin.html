@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - DietMate</title>
+    <script src="dark-mode-init.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script>
+        // Basic auth check
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/signin.html';
+        }
+        // We'll add a role check in admin.js
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900">
+    <div class="flex h-screen">
+        <!-- Admin Sidebar -->
+        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col dark:bg-gray-800 dark:border-gray-700">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h1 class="text-xl font-semibold dark:text-white">Admin Panel</h1>
+            </div>
+            <nav class="flex-1 p-4">
+                <a href="dashboard.html" class="w-full justify-start flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M15 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><path d="M15 7a4 4 0 1 0-8 0 4 4 0 0 0 8 0z"/><path d="M2.5 12.5 5 15l1.5-1.5"/></svg>
+                    <span class="ml-3">Back to App</span>
+                </a>
+                <button data-tab="users" class="nav-button w-full justify-start flex items-center px-4 py-2 text-sm font-medium rounded-md bg-green-500 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span class="ml-3">Users</span>
+                </button>
+                <button data-tab="meals" class="nav-button w-full justify-start flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg>
+                    <span class="ml-3">Meals</span>
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="admin-main-content" class="flex-1 overflow-auto p-8">
+            <!-- User Management Section -->
+            <div id="users-content" class="content-section">
+                <h1 class="text-2xl font-semibold dark:text-white mb-6">User Management</h1>
+                <div class="bg-white p-6 rounded-lg shadow-md dark:bg-gray-800">
+                    <div id="user-list-container">
+                        <!-- User list will be rendered here by admin.js -->
+                        <p class="dark:text-gray-300">Loading users...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meal Management Section (hidden by default) -->
+            <div id="meals-content" class="content-section hidden">
+                <h1 class="text-2xl font-semibold dark:text-white mb-6">Global Meal Library</h1>
+                <div class="bg-white p-6 rounded-lg shadow-md dark:bg-gray-800">
+                    <div id="meal-list-container">
+                        <!-- Meal list will be rendered here by admin.js -->
+                        <p class="dark:text-gray-300">Loading meals...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="admin.js?v=3"></script>
+</body>
+</html>

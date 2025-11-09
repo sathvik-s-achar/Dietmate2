@@ -104,13 +104,30 @@ app.post('/api/signin', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error || !data?.session) return res.status(401).json({ message: error?.message || 'Invalid credentials' });
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError || !signInData?.session) return res.status(401).json({ message: signInError?.message || 'Invalid credentials' });
+
+    // Fetch the user's profile to get their role
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', signInData.user.id)
+        .single();
+
+    if (profileError) {
+        // Log the error but don't fail the login. Assume 'user' role if profile is missing.
+        console.error("Error fetching profile on signin:", profileError);
+    }
+
+    const userRole = profile ? profile.role : 'user';
 
     return res.status(200).json({
         message: 'Signed in',
-        token: data.session.access_token,
-        user: data.user
+        token: signInData.session.access_token,
+        user: {
+            ...signInData.user,
+            role: userRole // Add role to the user object
+        }
     });
 });
 
@@ -170,6 +187,107 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
     }
 
     res.json({ message: 'Profile saved successfully' });
+});
+
+// Admin Middleware
+const isAdmin = async (req, res, next) => {
+    // req.user is attached by authenticateToken
+    if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required.' });
+    }
+
+    const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', req.user.id)
+        .single();
+
+    if (error || !profile) {
+        return res.status(500).json({ message: 'Could not retrieve user profile.' });
+    }
+
+    if (profile.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden: Admins only.' });
+    }
+
+    next();
+};
+
+// Admin Routes
+app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
+    // 1. Get all users from auth.users
+    const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
+    if (authError) {
+        return res.status(500).json({ message: authError.message });
+    }
+
+    // 2. Get all profiles from public.profiles
+    const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
+    if (profilesError) {
+        return res.status(500).json({ message: profilesError.message });
+    }
+
+    // 3. Create a map of profiles for easy lookup
+    const profilesMap = new Map(profiles.map(p => [p.id, p]));
+
+    // 4. Combine the data
+    const combinedUsers = users.map(user => {
+        const profile = profilesMap.get(user.id) || {};
+        return {
+            ...user, // email, id, created_at, etc. from auth
+            ...profile // username, role, age, etc. from profiles
+        };
+    });
+
+    res.json(combinedUsers);
+});
+
+app.delete('/api/admin/users/:id', authenticateToken, isAdmin, async (req, res) => {
+    const { id } = req.params;
+    if (!id) {
+        return res.status(400).json({ message: 'User ID is required.' });
+    }
+
+    const { error } = await supabase.auth.admin.deleteUser(id);
+
+    if (error) {
+        console.error('Error deleting user:', error);
+        return res.status(500).json({ message: error.message });
+    }
+
+    res.json({ message: 'User deleted successfully.' });
+});
+
+// Admin Meal Routes
+app.get('/api/admin/meals', authenticateToken, isAdmin, async (req, res) => {
+    const { data, error } = await supabase.from('meals').select('*');
+    if (error) return res.status(500).json({ message: error.message });
+    res.json(data);
+});
+
+app.post('/api/admin/meals', authenticateToken, isAdmin, async (req, res) => {
+    const { name, category, time, servings, image_url, preferences, nutrition, ingredients } = req.body;
+    // user_id is left null to indicate a global meal
+    const { data, error } = await supabase.from('meals').insert([{ name, category, time, servings, image_url, preferences, nutrition, ingredients }]);
+    if (error) return res.status(500).json({ message: error.message });
+    res.status(201).json({ message: 'Global meal created successfully.' });
+});
+
+app.put('/api/admin/meals/:id', authenticateToken, isAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { name, category, time, servings, image_url, preferences, nutrition, ingredients } = req.body;
+    const { data, error } = await supabase.from('meals').update({ name, category, time, servings, image_url, preferences, nutrition, ingredients }).eq('id', id);
+    if (error) return res.status(500).json({ message: error.message });
+    res.json({ message: 'Meal updated successfully.' });
+});
+
+app.delete('/api/admin/meals/:id', authenticateToken, isAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { error } = await supabase.from('meals').delete().eq('id', id);
+    if (error) return res.status(500).json({ message: error.message });
+    res.json({ message: 'Meal deleted successfully.' });
 });
 
 // Meals API
@@ -573,7 +691,16 @@ app.post('/api/ai-coach', authenticateToken, async (req, res) => {
 
         // 2. Call a real AI model API (e.g., Gemini)
         const axios = require('axios');
-        const systemPrompt = `You are a friendly and encouraging diet coach. Your user's profile is: ${JSON.stringify(profile)}. Their progress for the last 7 days is: ${JSON.stringify(progress)}. Please provide a helpful and concise response to their question.`;
+        const systemPrompt = `You are a friendly and encouraging diet coach. Your user's profile is: ${JSON.stringify(profile)}. Their progress for the last 7 days is: ${JSON.stringify(progress)}. Please provide a helpful and concise response to their question. If you suggest a specific meal, you MUST include a JSON object for that meal in your response, formatted exactly like this:
+<meal>
+{
+  "name": "Meal Name",
+  "category": "Breakfast",
+  "nutrition": { "calories": 250, "protein": 15, "carbs": 30, "fats": 8 },
+  "ingredients": ["Ingredient 1", "Ingredient 2"]
+}
+</meal>
+Do not include the JSON object if you are not suggesting a specific meal.`;
         const userPrompt = prompt;
 
         try {
@@ -754,9 +881,6 @@ app.put('/api/daily-progress/water', authenticateToken, async (req, res) => {
     }
 });
 
-// Serve static files as the last step
-app.use(express.static(__dirname));
-
 // Get the user's meal plan
 app.get('/api/planner', authenticateToken, async (req, res) => {
     const { data, error } = await supabase
@@ -793,6 +917,9 @@ app.put('/api/planner', authenticateToken, async (req, res) => {
 
     res.json({ message: 'Meal plan saved successfully.' });
 });
+
+// Serve static files as the last step
+app.use(express.static(__dirname));
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

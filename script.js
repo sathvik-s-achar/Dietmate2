@@ -77,6 +77,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // Apply initial state once DOM is ready
     applyInitialSidebarState();
 
+    // Check for admin role and show admin link if applicable
+    try {
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        if (userData && userData.role === 'admin') {
+            const adminLink = document.getElementById('admin-nav-link');
+            if (adminLink) {
+                adminLink.classList.remove('hidden');
+            }
+        }
+    } catch (e) {
+        console.error('Could not parse user data for admin check:', e);
+    }
+
     // Function to fetch and render progress charts
     const fetchAndRenderProgressCharts = async () => {
         console.log("Fetching progress charts data...");
@@ -588,8 +601,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-    mainContent.addEventListener('click', (event) => {
-        if (event.target.id === 'sign-out-btn') {
+    document.addEventListener('click', (event) => {
+        if (event.target.id === 'sign-out-btn' || event.target.id === 'sidebar-sign-out-btn') {
             localStorage.removeItem('token');
             localStorage.removeItem('userData');
             window.location.href = '/signin.html';
@@ -699,6 +712,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    const setupDarkModeToggle = (parentElement) => {
+        const toggle = parentElement.querySelector('#dark-mode-toggle');
+        if (!toggle) return;
+
+        // Set initial state of the toggle
+        if (localStorage.getItem('dark-mode') === 'true') {
+            toggle.checked = true;
+        }
+
+        toggle.addEventListener('change', () => {
+            if (toggle.checked) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('dark-mode', 'true');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('dark-mode', 'false');
+            }
+        });
+    };
+
     // Function to handle AI Coach interaction
     const setupAICoach = () => {
         const askAiBtn = document.getElementById('ask-ai-btn');
@@ -736,7 +769,38 @@ document.addEventListener("DOMContentLoaded", () => {
                     const result = await response.json();
 
                     if (response.ok) {
-                        aiCoachResponse.innerHTML = marked.parse(result.response);
+                        let responseText = result.response;
+                        const mealRegex = /<meal>([\s\S]*?)<\/meal>/;
+                        const mealMatch = responseText.match(mealRegex);
+
+                        if (mealMatch && mealMatch[1]) {
+                            try {
+                                const mealJson = JSON.parse(mealMatch[1]);
+                                responseText = responseText.replace(mealRegex, ''); // Remove the JSON from the text
+
+                                const mealCard = document.createElement('div');
+                                mealCard.className = 'p-4 border rounded-lg bg-green-50 my-4';
+                                mealCard.innerHTML = `
+                                    <h4 class="font-bold">${mealJson.name}</h4>
+                                    <p>Calories: ${mealJson.nutrition.calories}, Protein: ${mealJson.nutrition.protein}g, Carbs: ${mealJson.nutrition.carbs}g, Fats: ${mealJson.nutrition.fats}g</p>
+                                    <p>Ingredients: ${mealJson.ingredients.join(', ')}</p>
+                                    <button class="add-ai-meal-btn mt-2 bg-green-500 text-white px-3 py-1 rounded text-sm">Add to Today's Log</button>
+                                `;
+
+                                aiCoachResponse.innerHTML = marked.parse(responseText);
+                                aiCoachResponse.appendChild(mealCard);
+
+                                mealCard.querySelector('.add-ai-meal-btn').addEventListener('click', () => {
+                                    addMealFromAI(mealJson);
+                                });
+
+                            } catch (e) {
+                                console.error("Failed to parse meal JSON from AI response:", e);
+                                aiCoachResponse.innerHTML = marked.parse(responseText);
+                            }
+                        } else {
+                            aiCoachResponse.innerHTML = marked.parse(responseText);
+                        }
                     } else {
                         aiCoachResponse.innerHTML = `Error: ${result.message || 'Failed to get response from AI Coach.'}`;
                     }
@@ -747,6 +811,40 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     };
+
+    // Function to add a meal suggested by the AI
+    const addMealFromAI = async (mealData) => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('You must be signed in to save a meal.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/meals', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(mealData)
+            });
+
+            const result = await response.json();
+            alert(result.message);
+
+            if (response.ok) {
+                // Optionally, refresh the meals list if it's visible
+                if (document.getElementById('meals-content')?.classList.contains('hidden') === false) {
+                    renderMealsTab();
+                }
+            }
+        } catch (error) {
+            console.error('Error saving meal from AI:', error);
+            alert('An error occurred while saving the meal.');
+        }
+    };
+
 
     // Function to set up the meal planner
     const setupPlanner = async () => {
@@ -922,6 +1020,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     } else if (tabId === 'profile') {
                         populateProfileForm();
                         setupProfileForm();
+                    } else if (tabId === 'settings') {
+                        const toggle = mainContent.querySelector('#dark-mode-toggle');
+                        if (toggle) {
+                            toggle.checked = (localStorage.getItem('dark-mode') === 'true');
+                        }
                     } else if (tabId === 'ai-coach') {
                         setupAICoach();
                     } else if (tabId === 'planner') {
@@ -962,7 +1065,7 @@ document.addEventListener("DOMContentLoaded", () => {
             meals.forEach(m => {
                 console.log('Rendering meal:', m);
                 const card = document.createElement('div');
-                card.className = 'meal-card flex gap-4 p-4 rounded-lg border border-gray-200 hover:border-green-500 transition-colors';
+                card.className = 'meal-card flex gap-4 p-4 rounded-lg border border-gray-200 hover:border-green-500 transition-colors dark:border-gray-700 dark:hover:border-green-500';
                 if (m.is_eaten_today) {
                     card.classList.add('opacity-70');
                 }
@@ -980,11 +1083,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const left = document.createElement('div');
                 const title = document.createElement('h4');
-                title.className = 'mb-1';
+                title.className = 'mb-1 dark:text-white';
                 title.textContent = m.name || 'Untitled Meal';
 
                 const meta = document.createElement('div');
-                meta.className = 'flex items-center gap-2 text-sm text-gray-500';
+                meta.className = 'flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400';
                 const metaIcon = document.createElement('span');
                 metaIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
                 const metaText = document.createElement('span');
@@ -998,12 +1101,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 const right = document.createElement('div');
                 right.className = 'text-right';
                 const cal = document.createElement('div');
-                cal.className = 'text-lg text-green-600';
+                cal.className = 'text-lg text-green-600 dark:text-green-400';
                 // Defensive: coerce values to strings and provide fallback
                 const calVal = (m.nutrition && (typeof m.nutrition.calories !== 'undefined')) ? String(m.nutrition.calories) : '';
                 cal.textContent = calVal || '—';
                 const calLabel = document.createElement('div');
-                calLabel.className = 'text-xs text-gray-500';
+                calLabel.className = 'text-xs text-gray-500 dark:text-gray-400';
                 calLabel.textContent = 'calories';
                 right.appendChild(cal);
                 right.appendChild(calLabel);
@@ -1052,13 +1155,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 macros.className = 'flex gap-4 mt-3';
                 const pDiv = document.createElement('div'); pDiv.className = 'flex flex-col';
                 const prot = (m.nutrition && (typeof m.nutrition.protein !== 'undefined')) ? String(m.nutrition.protein) : '';
-                pDiv.innerHTML = `<span class="text-xs text-gray-500">Protein</span><span class="text-sm">${prot ? prot+'g' : '—'}</span>`;
+                pDiv.innerHTML = `<span class="text-xs text-gray-500 dark:text-gray-400">Protein</span><span class="text-sm dark:text-white">${prot ? prot+'g' : '—'}</span>`;
                 const cDiv = document.createElement('div'); cDiv.className = 'flex flex-col';
                 const carbs = (m.nutrition && (typeof m.nutrition.carbs !== 'undefined')) ? String(m.nutrition.carbs) : '';
-                cDiv.innerHTML = `<span class="text-xs text-gray-500">Carbs</span><span class="text-sm">${carbs ? carbs+'g' : '—'}</span>`;
+                cDiv.innerHTML = `<span class="text-xs text-gray-500 dark:text-gray-400">Carbs</span><span class="text-sm dark:text-white">${carbs ? carbs+'g' : '—'}</span>`;
                 const fDiv = document.createElement('div'); fDiv.className = 'flex flex-col';
                 const fats = (m.nutrition && (typeof m.nutrition.fats !== 'undefined')) ? String(m.nutrition.fats) : '';
-                fDiv.innerHTML = `<span class="text-xs text-gray-500">Fats</span><span class="text-sm">${fats ? fats+'g' : '—'}</span>`;
+                fDiv.innerHTML = `<span class="text-xs text-gray-500 dark:text-gray-400">Fats</span><span class="text-sm dark:text-white">${fats ? fats+'g' : '—'}</span>`;
 
                 macros.appendChild(pDiv);
                 macros.appendChild(cDiv);
@@ -1104,15 +1207,26 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // Remove meal by id and re-render
-    const removeMeal = (id) => {
+    const removeMeal = async (id) => {
         try {
-            const meals = JSON.parse(localStorage.getItem('meals') || '[]');
-            const filtered = meals.filter(m => m.id !== id);
-            localStorage.setItem('meals', JSON.stringify(filtered));
-            // If currently viewing meals tab, refresh UI
-            renderMealsTab();
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/meals/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                alert('Meal deleted successfully.');
+                renderMealsTab(); // Re-render the list after successful deletion
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to delete meal: ${errorData.message}`);
+            }
         } catch (err) {
             console.error('Error removing meal:', err);
+            alert('An error occurred while deleting the meal.');
         }
     };
 

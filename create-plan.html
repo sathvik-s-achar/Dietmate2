@@ -4,19 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Meal Plan - DietMate</title>
+    <script src="dark-mode-init.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 min-h-screen dark:bg-gray-900">
     <div class="max-w-4xl mx-auto py-8">
-        <a href="dashboard.html#planner" class="inline-flex items-center text-sm text-gray-600 hover:underline mb-4">&larr; Back to Planner</a>
+        <a href="dashboard.html#planner" class="inline-flex items-center text-sm text-gray-600 hover:underline mb-4 dark:text-gray-400 dark:hover:text-gray-300">&larr; Back to Planner</a>
 
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h1 class="text-2xl font-semibold mb-4">Create a New Meal Plan</h1>
+        <div class="bg-white p-6 rounded-lg shadow dark:bg-gray-800">
+            <h1 class="text-2xl font-semibold mb-4 dark:text-white">Create a New Meal Plan</h1>
 
             <form id="create-plan-form" class="space-y-4">
                 <div>
-                    <label for="plan-name" class="text-sm font-medium">Plan Name</label>
-                    <input id="plan-name" required class="mt-1 block w-full border border-gray-200 rounded px-3 py-2" placeholder="e.g., 'My Summer Cutting Plan' or 'Week 1 Bulking'" />
+                    <label for="plan-name" class="text-sm font-medium dark:text-gray-300">Plan Name</label>
+                    <input id="plan-name" required class="mt-1 block w-full border border-gray-200 rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="e.g., 'My Summer Cutting Plan' or 'Week 1 Bulking'" />
                 </div>
 
                 <div class="flex items-center gap-3">

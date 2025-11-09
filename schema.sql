@@ -2,6 +2,7 @@
 CREATE TABLE public.profiles (
   id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   username text,
+  role text NOT NULL DEFAULT 'user',
   age int,
   height int,
   weight numeric,
@@ -65,7 +66,7 @@ ALTER TABLE public.daily_progress ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for profiles table
 CREATE POLICY "Users can view their own profile." ON public.profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can create their own profile." ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can create their own profile." ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update their own profile." ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 -- RLS policies for meals table
