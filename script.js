@@ -962,7 +962,7 @@ document.addEventListener("DOMContentLoaded", () => {
             meals.forEach(m => {
                 console.log('Rendering meal:', m);
                 const card = document.createElement('div');
-                card.className = 'flex gap-4 p-4 rounded-lg border border-gray-200 hover:border-green-500 transition-colors';
+                card.className = 'meal-card flex gap-4 p-4 rounded-lg border border-gray-200 hover:border-green-500 transition-colors';
                 if (m.is_eaten_today) {
                     card.classList.add('opacity-70');
                 }
@@ -1159,4 +1159,25 @@ document.addEventListener("DOMContentLoaded", () => {
         // Default
         showContent('dashboard');
     }
+
+    document.addEventListener('input', (e) => {
+        if (e.target.id === 'dashboard-meal-search') {
+            const searchTerm = e.target.value.toLowerCase();
+            const mealsList = document.getElementById('todays-meals-list');
+            if (!mealsList) return;
+
+            const mealCards = mealsList.querySelectorAll('.meal-card');
+            mealCards.forEach(card => {
+                const mealNameElement = card.querySelector('h4');
+                if (mealNameElement) {
+                    const mealName = mealNameElement.textContent.toLowerCase();
+                    if (mealName.includes(searchTerm)) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
+            });
+        }
+    });
 });
