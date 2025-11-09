@@ -928,6 +928,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         mealLibraryList.innerHTML = '';
+        const mealItems = []; // Store meal items to filter later
         meals.forEach(meal => {
             const mealItem = document.createElement('div');
             mealItem.className = 'p-2 border rounded-lg bg-gray-100 cursor-move';
@@ -938,7 +939,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 event.dataTransfer.setData('text/plain', meal.id);
             });
             mealLibraryList.appendChild(mealItem);
+            mealItems.push(mealItem); // Add to array for filtering
         });
+
+        const mealSearchInput = document.getElementById('meal-search');
+        if (mealSearchInput) {
+            mealSearchInput.addEventListener('input', () => {
+                const searchTerm = mealSearchInput.value.toLowerCase();
+                mealItems.forEach(item => {
+                    const mealName = item.textContent.toLowerCase();
+                    if (mealName.includes(searchTerm)) {
+                        item.style.display = 'block'; // Show the item
+                    } else {
+                        item.style.display = 'none'; // Hide the item
+                    }
+                });
+            });
+        }
 
         const mealSlots = document.querySelectorAll('.meal-slot');
         mealSlots.forEach(slot => {

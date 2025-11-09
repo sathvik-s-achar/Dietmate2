@@ -270,8 +270,20 @@ app.get('/api/admin/meals', authenticateToken, isAdmin, async (req, res) => {
 app.post('/api/admin/meals', authenticateToken, isAdmin, async (req, res) => {
     const { name, category, time, servings, image_url, preferences, nutrition, ingredients } = req.body;
     // user_id is left null to indicate a global meal
-    const { data, error } = await supabase.from('meals').insert([{ name, category, time, servings, image_url, preferences, nutrition, ingredients }]);
-    if (error) return res.status(500).json({ message: error.message });
+    const { data, error } = await supabase.from('meals').insert([{
+        name,
+        category: category || 'Uncategorized', // Default category
+        time: time || '00:00', // Default time
+        servings: servings || 1, // Default servings
+        image_url: image_url || '', // Default empty image URL
+        preferences: preferences || [], // Default empty array for preferences
+        nutrition,
+        ingredients
+    }]);
+    if (error) {
+        console.error("Error creating global meal:", error);
+        return res.status(500).json({ message: error.message });
+    }
     res.status(201).json({ message: 'Global meal created successfully.' });
 });
 
