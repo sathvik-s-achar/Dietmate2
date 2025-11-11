@@ -32,10 +32,6 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     <span class="ml-3">Users</span>
                 </button>
-                <button data-tab="meals" class="nav-button w-full justify-start flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg>
-                    <span class="ml-3">Meals</span>
-                </button>
             </nav>
         </aside>
 
@@ -52,65 +48,8 @@
                 </div>
             </div>
 
-            <!-- Meal Management Section (hidden by default) -->
-            <div id="meals-content" class="content-section hidden">
-                <h1 class="text-2xl font-semibold dark:text-white mb-6">Global Meal Library</h1>
-                <div class="bg-white p-6 rounded-lg shadow-md dark:bg-gray-800">
-                    <button id="add-new-meal-btn" class="mb-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">Add New Meal</button>
-                    <input type="text" id="admin-meal-search" placeholder="Search meals..." class="w-full border border-gray-200 rounded px-3 py-2 mb-4 dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                    <div id="meal-list-container">
-                        <!-- Meal list will be rendered here by admin.js -->
-                        <p class="dark:text-gray-300">Loading meals...</p>
-                    </div>
-                </div>
-            </div>
         </main>
     </div>
     <script src="admin.js?v=3"></script>
-
-    <!-- Edit Meal Modal -->
-    <div id="edit-meal-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">Edit Meal</h3>
-            <form id="edit-meal-form" class="space-y-4">
-                <div>
-                    <label for="edit-meal-id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Meal ID</label>
-                    <input type="text" id="edit-meal-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600" readonly>
-                </div>
-                <div>
-                    <label for="edit-meal-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                    <input type="text" id="edit-meal-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600" required>
-                </div>
-                <div>
-                    <label for="edit-meal-category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
-                    <input type="text" id="edit-meal-category" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                </div>
-                <div>
-                    <label for="edit-meal-calories" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Calories</label>
-                    <input type="number" id="edit-meal-calories" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                </div>
-                <div>
-                    <label for="edit-meal-protein" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Protein (g)</label>
-                    <input type="number" id="edit-meal-protein" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                </div>
-                <div>
-                    <label for="edit-meal-carbs" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Carbs (g)</label>
-                    <input type="number" id="edit-meal-carbs" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                </div>
-                <div>
-                    <label for="edit-meal-fats" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fats (g)</label>
-                    <input type="number" id="edit-meal-fats" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                </div>
-                <div>
-                    <label for="edit-meal-ingredients" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ingredients (comma-separated)</label>
-                    <textarea id="edit-meal-ingredients" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600"></textarea>
-                </div>
-                <div class="flex justify-end space-x-4">
-                    <button type="button" id="cancel-edit-meal" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
 </body>
 </html>

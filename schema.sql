@@ -16,7 +16,7 @@ CREATE TABLE public.profiles (
 -- Create the meals table
 CREATE TABLE public.meals (
   id bigserial PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
   category text,
   "time" time,
@@ -70,8 +70,9 @@ CREATE POLICY "Users can create their own profile." ON public.profiles FOR INSER
 CREATE POLICY "Users can update their own profile." ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 -- RLS policies for meals table
-CREATE POLICY "Users can view their own meals." ON public.meals FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view their own meals and global meals." ON public.meals FOR SELECT USING (auth.uid() = user_id OR user_id IS NULL);
 CREATE POLICY "Users can create their own meals." ON public.meals FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Admins can create global meals." ON public.meals FOR INSERT WITH CHECK (((SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin') AND (user_id IS NULL));
 CREATE POLICY "Users can update their own meals." ON public.meals FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete their own meals." ON public.meals FOR DELETE USING (auth.uid() = user_id);
 

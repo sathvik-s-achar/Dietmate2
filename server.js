@@ -271,6 +271,7 @@ app.post('/api/admin/meals', authenticateToken, isAdmin, async (req, res) => {
     const { name, category, time, servings, image_url, preferences, nutrition, ingredients } = req.body;
     // user_id is left null to indicate a global meal
     const { data, error } = await supabase.from('meals').insert([{
+        user_id: null,
         name,
         category: category || 'Uncategorized', // Default category
         time: time || '00:00', // Default time
