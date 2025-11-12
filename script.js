@@ -626,6 +626,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (usernameElement && profile.username) {
                     usernameElement.textContent = profile.username;
                 }
+                const avatarElement = document.getElementById('sidebar-avatar');
+                // Removed: if (avatarElement && profile.avatar_url) { avatarElement.src = profile.avatar_url; }
             } else {
                 console.error('Failed to fetch profile');
             }
@@ -1317,4 +1319,8 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     });
+
+
+
+
 });

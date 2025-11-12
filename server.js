@@ -3,6 +3,9 @@ const express = require('express');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
+const multer = require('multer');
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const app = express();
 app.use((req, res, next) => {
@@ -146,7 +149,7 @@ app.get('/dashboard', authenticateToken, (req, res) => {
 app.get('/api/profile', authenticateToken, async (req, res) => {
     const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, avatar_url')
         .eq('id', req.user.id)
         .single();
 
@@ -188,6 +191,8 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
 
     res.json({ message: 'Profile saved successfully' });
 });
+
+
 
 // Admin Middleware
 const isAdmin = async (req, res, next) => {

@@ -27,6 +27,7 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^6.0.0"
+    "mongoose": "^6.0.0",
+    "multer": "^2.0.2"
   }
 }

@@ -10,6 +10,7 @@ CREATE TABLE public.profiles (
   protein_goal int,
   carb_goal int,
   fat_goal int,
+  avatar_url text,
   PRIMARY KEY (id)
 );
 
