@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${user.role || 'user'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${user.id}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                            <button class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 delete-user-btn" data-user-id="${user.id}">Delete</button>
+                            <button class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 delete-user-btn flex justify-center" data-user-id="${user.id}">Delete</button>
                         </td>
                     </tr>
                 `).join('')}
